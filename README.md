@@ -32,14 +32,14 @@ Each training run creates a new model version, while the selected model is store
 ## Training–Application Separation
 WayPoint has two separate parts that work together:
 
-${\color{red}\text{### Training System — training.py}}$
+${\color{red}\textbf{Training System — training.py}}$
 
 ${\color{red}\text{training.py is responsible for generating and retaining historical data, training multiple machine learning models,}}$
 ${\color{red}\text{evaluating them using metrics such as R², RMSE, MAE, Accuracy, and Weighted F1 Score, and selecting the}}$
 ${\color{red}\text{best-performing models. The selected models are saved as the current models, while previous model versions}}$
 ${\color{red}\text{are retained in models/versions.}}$
 
-${\color{red}\text{### Student-Facing Application — WayPoint.py}}$
+${\color{red}\textbf{Student-Facing Application — WayPoint.py}}$
 
 ${\color{red}\text{WayPoint.py is the student-facing application. It loads the best-performing models selected by training.py from}}$
 ${\color{red}\text{models/current and uses them to provide performance prediction, risk classification, SHAP-based explanations,}}$
