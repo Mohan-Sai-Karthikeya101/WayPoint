@@ -1,5 +1,5 @@
-
-                                      # WayPoint
+<h1 align="center">WayPoint</h1>
+                            
 > **“Don’t just predict where you are. Understand where you can go.”**
 
 
@@ -13,21 +13,21 @@ WayPoint goes beyond simply predicting a result. It uses SHAP explainability to 
 
 ## Novelty Features
 
-### 1. SHAP-Based Explainability
+### *1. SHAP-Based Explainability*
 
 WayPoint does not only provide a prediction; it explains which input parameters contributed most to the predicted performance and risk classification. This makes the model's output more understandable and actionable.
 
-### 2. Dream Score Analysis
+### *2. Dream Score Analysis*
 
 Students can enter a desired target score, and WayPoint analyses what areas could be improved to work towards that target. The recommendations are constrained to practical and realistic changes rather than unrealistic study schedules or phone-usage reductions.
 
-### 3. Persistent Learning & Model Versioning
+### *3. Persistent Learning & Model Versioning*
 
 WayPoint retains historical training data and previous model versions instead of replacing them after every training run. Compatible previous models can be used for continued training, allowing the system to build on earlier learning.
 
 Each training run creates a new model version, while the selected model is stored separately as the **current model** used by the application. This provides model history, backup, and controlled updates without losing previous versions.
 
-### 4. Training–Application Separation
+### *4. Training–Application Separation*
 
 The training system and student-facing application are separated. `training.py` handles data generation, historical data loading, model training, evaluation, model selection, and versioning, while `WayPoint.py` loads the saved current models for prediction.
 
@@ -42,7 +42,7 @@ WayPoint.py — the student-facing application that loads the saved current mode
 
 IMPORTANT: The normal student application does not need to retrain the models. Training and model updating are handled separately.
 
- # **What Problem It Solves & Why It Is Unique**
+ # *What Problem It Solves & Why It Is Unique*
 
 A conventional student-performance prediction system generally answers “What is likely to happen?” but does not help the student understand “What can I work on to move towards my goal?”
 
@@ -50,7 +50,7 @@ WayPoint addresses this gap by combining prediction, risk classification, SHAP-b
 
 What makes it distinctive is that the system connects prediction → explanation → actionable improvement → target-based planning, rather than treating prediction as the final output.
 
-# **Risk Classification**
+# *Risk Classification*
 
 WayPoint classifies students into five categories:
 
@@ -63,7 +63,7 @@ The classification model learns the relationship between the six input parameter
 This means the risk boundaries are learned from the training data and the model rather than being hard-coded into the application.
 
 
-# **Persistent Learning & Model Versioning**
+# *Persistent Learning & Model Versioning*
 
 WayPoint is designed so that training and actual student usage are separate.
 
@@ -102,9 +102,8 @@ Install the following if they are not already installed:
 - **Python** — required to run WayPoint.
 - **Git** — required to clone the WayPoint repository.
 
-**Visual Studio Code is not required to run the project.**
 
-Open **Windows PowerShell** directly from the Start Menu.
+Open **Windows PowerShell** from the Start Menu.
 
 Verify Python:
 
