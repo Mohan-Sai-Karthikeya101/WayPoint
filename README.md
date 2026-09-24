@@ -80,7 +80,7 @@ Every trained model is saved as a separate version instead of simply overwriting
 This gives WayPoint a persistent training workflow where the project can continue improving while previous model versions remain available.
 
 
-# **Training–Application Separation*
+# *Training–Application Separation*
 The WayPoint system is divided into two main parts:
 
 training.py — Handles data generation, historical data loading, model training, evaluation, model selection, persistence, and model versioning.
@@ -97,6 +97,7 @@ Data Generation → Training → Evaluation → Model Selection → Versioning �
 
 | Name                 | Department | Roll Number |
 | -------------------- | ---------- | ----------- |
+|Mohan Sai Karthikeya | CSE        | 130003184   |
 | Vignesh              | Aerospace  | 130017057   |
 | Boga Chenchu Gagana  | IT         | 130015014   |
-| Mohan Sai Karthikeya | CSE        | 130003184   |
+
