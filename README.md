@@ -29,19 +29,21 @@ Each training run creates a new model version, while the selected model is store
 
 ### *4. Training–Application Separation*
 
-The training system and student-facing application are separated. `training.py` handles data generation, historical data loading, model training, evaluation, model selection, and versioning, while `WayPoint.py` loads the saved current models for prediction.
+## Training–Application Separation
 
-This allows the application to be used without retraining the models every time and keeps the complete workflow organized from **data generation → training → evaluation → model selection → versioning → prediction**.
+WayPoint has two separate parts that work together:
 
+**`training.py`** — This is responsible for generating and retaining historical data, training multiple machine learning models, evaluating them using metrics such as **R², RMSE, MAE, Accuracy, and Weighted F1 Score**, and selecting the best-performing models. The selected models are saved as the **current models**, while previous model versions are retained in `models/versions`.
 
-The project is divided into two main parts:
+> ### `WayPoint.py` — Student-Facing Application
+>
+> **`WayPoint.py`** is the student-facing application. It loads the **best-performing models selected by `training.py`** from `models/current` and uses them to provide **performance prediction, risk classification, SHAP-based explanations, recommendations, and Dream Score analysis**.
+>
+> The application **does not retrain the models when it is opened**. It uses the saved models produced by the training process. When `training.py` is run again, the models can be updated and a **new model version is saved without losing previous versions**.
 
-training.py — handles data generation, training, evaluation, model selection, persistence, and versioning.
+The complete WayPoint workflow is:
 
-WayPoint.py — the student-facing application that loads the saved current models and performs predictions.
-
-IMPORTANT: The normal student application does not need to retrain the models. Training and model updating are handled separately.
-
+**Data Generation → Historical Data → Model Training → Model Evaluation → Best Model Selection → Model Versioning → Current Model → Student Application → Prediction & Analysis**
  # *What Problem It Solves & Why It Is Unique*
 
 A conventional student-performance prediction system generally answers “What is likely to happen?” but does not help the student understand “What can I work on to move towards my goal?”
@@ -80,18 +82,6 @@ Every trained model is saved as a separate version instead of simply overwriting
 This gives WayPoint a persistent training workflow where the project can continue improving while previous model versions remain available.
 
 
-# *Training–Application Separation*
-The WayPoint system is divided into two main parts:
-
-training.py — Handles data generation, historical data loading, model training, evaluation, model selection, persistence, and model versioning.
-
-WayPoint.py — Acts as the student-facing application. It loads the latest selected models from models/current and uses them to perform predictions, risk classification, explainability, recommendations, and Dream Score analysis.
-
-The student application does not retrain the models every time it is opened. Training and model updates are handled separately through training.py, while WayPoint.py focuses on using the saved models.
-
-This keeps the complete workflow organized as:
-
-Data Generation → Training → Evaluation → Model Selection → Versioning → Current Model → Prediction
 
 # WayPoint — Installation & Execution Guide
 
