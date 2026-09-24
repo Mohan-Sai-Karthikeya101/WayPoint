@@ -29,27 +29,24 @@ WayPoint retains historical training data and previous model versions instead of
 Each training run creates a new model version, while the selected model is stored separately as the **current model** used by the application. This provides model history, backup, and controlled updates without losing previous versions.
 
 ### *4. Training–Application Separation*
+
 ## Training–Application Separation
+
 WayPoint has two separate parts that work together:
 
-${\color{red}\textbf{Training System — training.py}}$
+### **Training System — `training.py`**
 
-${\color{red}\text{training.py is responsible for generating and retaining historical data, training multiple machine learning models,}}$
-${\color{red}\text{evaluating them using metrics such as R², RMSE, MAE, Accuracy, and Weighted F1 Score, and selecting the}}$
-${\color{red}\text{best-performing models. The selected models are saved as the current models, while previous model versions}}$
-${\color{red}\text{are retained in models/versions.}}$
+`training.py` is responsible for generating and retaining historical data, training multiple machine learning models, evaluating them using metrics such as **R², RMSE, MAE, Accuracy, and Weighted F1 Score**, and selecting the best-performing models. The selected models are saved as the **current models**, while previous model versions are retained in `models/versions`.
 
-${\color{red}\textbf{Student-Facing Application — WayPoint.py}}$
+### **Student-Facing Application — `WayPoint.py`**
 
-${\color{red}\text{WayPoint.py is the student-facing application. It loads the best-performing models selected by training.py from}}$
-${\color{red}\text{models/current and uses them to provide performance prediction, risk classification, SHAP-based explanations,}}$
-${\color{red}\text{recommendations, and Dream Score analysis.}}$
+**WayPoint.py** is the student-facing application. It loads the **best-performing models selected by `training.py`** from `models/current` and uses them to provide **performance prediction, risk classification, SHAP-based explanations, recommendations, and Dream Score analysis**.
 
-${\color{red}\text{The application does not retrain the models when it is opened. It uses the saved models produced by the training}}$
-${\color{red}\text{process. When training.py is run again, the models can be updated and a new model version is saved without}}$
-${\color{red}\text{losing previous versions.}}$
+**The application does not retrain the models when it is opened.** It uses the saved models produced by the training process. When `training.py` is run again, the models can be updated and a **new model version is saved without losing previous versions.**
 
+### **Complete WayPoint Workflow**
 
+**Data Generation → Historical Data → Model Training → Model Evaluation → Best Model Selection → Model Versioning → Current Model → Student Application → Prediction & Analysis**
 
  # *What Problem It Solves & Why It Is Unique*
 
