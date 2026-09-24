@@ -1,0 +1,92 @@
+{
+    "project": "WayPoint",
+    "version": "v4",
+    "created_at": "2026-09-24T14:41:22.004954+00:00",
+    "batch_number": 4,
+    "new_training_samples": 20000,
+    "new_testing_samples": 10000,
+    "total_training_samples": 80000,
+    "total_testing_samples": 40000,
+    "training_batches": 4,
+    "testing_batches": 4,
+    "features": [
+        "study_hours",
+        "phone_hours",
+        "days_before_exam",
+        "assignment_percentage",
+        "attendance_percentage",
+        "previous_marks"
+    ],
+    "score_target": "final_score",
+    "risk_target": "risk_category",
+    "risk_order": [
+        "Very High Risk",
+        "High Risk",
+        "Moderate Risk",
+        "Low Risk",
+        "Very Low Risk"
+    ],
+    "candidate_score_models": [
+        "DecisionTreeRegressor",
+        "RandomForestRegressor",
+        "HistGradientBoostingRegressor",
+        "HistGradientBoostingRegressor_WarmStart"
+    ],
+    "candidate_risk_models": [
+        "DecisionTreeClassifier",
+        "RandomForestClassifier",
+        "HistGradientBoostingClassifier",
+        "HistGradientBoostingClassifier_WarmStart"
+    ],
+    "best_score_model": "HistGradientBoostingRegressor_WarmStart",
+    "best_risk_model": "HistGradientBoostingClassifier_WarmStart",
+    "score_metrics": {
+        "DecisionTreeRegressor": {
+            "r2": 0.8634285601155729,
+            "rmse": 4.530062399699884,
+            "mae": 3.6095489927683864
+        },
+        "RandomForestRegressor": {
+            "r2": 0.9079533788813774,
+            "rmse": 3.719017017443121,
+            "mae": 2.968930885848219
+        },
+        "HistGradientBoostingRegressor": {
+            "r2": 0.9146063565504313,
+            "rmse": 3.582094278723212,
+            "mae": 2.8620623496858877
+        },
+        "HistGradientBoostingRegressor_WarmStart": {
+            "r2": 0.9151198757278528,
+            "rmse": 3.57130748111671,
+            "mae": 2.8539845832617643
+        }
+    },
+    "risk_metrics": {
+        "DecisionTreeClassifier": {
+            "accuracy": 0.691425,
+            "weighted_f1": 0.696534037076477
+        },
+        "RandomForestClassifier": {
+            "accuracy": 0.776025,
+            "weighted_f1": 0.7779016878083188
+        },
+        "HistGradientBoostingClassifier": {
+            "accuracy": 0.789375,
+            "weighted_f1": 0.7890486008975105
+        },
+        "HistGradientBoostingClassifier_WarmStart": {
+            "accuracy": 0.79135,
+            "weighted_f1": 0.7910507859170343
+        }
+    },
+    "previous_model_loaded": true,
+    "previous_version": "v3",
+    "persistent_learning": {
+        "historical_data_reused": true,
+        "previous_model_loaded": true,
+        "warm_start_candidates_enabled": true,
+        "warm_start_additional_trees": 100,
+        "warm_start_additional_iterations": 100
+    }
+}
