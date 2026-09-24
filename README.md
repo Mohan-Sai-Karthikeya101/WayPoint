@@ -29,21 +29,21 @@ Each training run creates a new model version, while the selected model is store
 
 ### *4. Training–Application Separation*
 
-## Training–Application Separation
-
 WayPoint has two separate parts that work together:
 
 **`training.py`** — This is responsible for generating and retaining historical data, training multiple machine learning models, evaluating them using metrics such as **R², RMSE, MAE, Accuracy, and Weighted F1 Score**, and selecting the best-performing models. The selected models are saved as the **current models**, while previous model versions are retained in `models/versions`.
 
-> ### `WayPoint.py` — Student-Facing Application
->
-> **`WayPoint.py`** is the student-facing application. It loads the **best-performing models selected by `training.py`** from `models/current` and uses them to provide **performance prediction, risk classification, SHAP-based explanations, recommendations, and Dream Score analysis**.
->
-> The application **does not retrain the models when it is opened**. It uses the saved models produced by the training process. When `training.py` is run again, the models can be updated and a **new model version is saved without losing previous versions**.
+<span style="color:#58A6FF"><strong>`WayPoint.py` — Student-Facing Application</strong></span>
+
+<span style="color:#58A6FF"><strong>`WayPoint.py`</strong></span> is the student-facing application. It loads the <span style="color:#58A6FF"><strong>best-performing models selected by `training.py`</strong></span> from `models/current` and uses them to provide **performance prediction, risk classification, SHAP-based explanations, recommendations, and Dream Score analysis**.
+
+<span style="color:#58A6FF"><strong>The application does not retrain the models when it is opened.</strong></span> It uses the saved models produced by the training process. When `training.py` is run again, the models can be updated and a <span style="color:#58A6FF"><strong>new model version is saved without losing previous versions.</strong></span>
 
 The complete WayPoint workflow is:
 
 **Data Generation → Historical Data → Model Training → Model Evaluation → Best Model Selection → Model Versioning → Current Model → Student Application → Prediction & Analysis**
+
+
  # *What Problem It Solves & Why It Is Unique*
 
 A conventional student-performance prediction system generally answers “What is likely to happen?” but does not help the student understand “What can I work on to move towards my goal?”
