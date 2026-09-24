@@ -1,6 +1,6 @@
 <h1 align="center">WayPoint</h1>
                             
-> **“Don’t just predict where you are. Understand where you can go.”**
+<h1 align="center">**“Don’t just predict where you are. Understand where you can go.”**</h1>
 
 
 
