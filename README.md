@@ -2,6 +2,7 @@
 
 Data & Model Training
 
+WayPoint uses synthetically generated student data so that the system can be trained and tested without using private student records. Each training run generates 20,000 training samples and 10,000 testing samples.
 
 
 | Name                 | Department | Roll Number |
