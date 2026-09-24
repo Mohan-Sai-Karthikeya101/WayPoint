@@ -29,17 +29,17 @@ Each training run creates a new model version, while the selected model is store
 
 ### *4. Training–Application Separation*
 
-WayPoint has two separate parts that work together:
-
-### **Training System — `training.py`**
-
-`training.py` is responsible for generating and retaining historical data, training multiple machine learning models, evaluating them using metrics such as **R², RMSE, MAE, Accuracy, and Weighted F1 Score**, and selecting the best-performing models. The selected models are saved as the **current models**, while previous model versions are retained in `models/versions`.
-
-### **Student-Facing Application — `WayPoint.py`**
-
-**WayPoint.py** is the student-facing application. It loads the **best-performing models selected by `training.py`** from `models/current` and uses them to provide **performance prediction, risk classification, SHAP-based explanations, recommendations, and Dream Score analysis**.
-
-**The application does not retrain the models when it is opened.** It uses the saved models produced by the training process. When `training.py` is run again, the models can be updated and a **new model version is saved without losing previous versions.**
+```diff
+- ### **Training System — `training.py`**
+- 
+- `training.py` is responsible for generating and retaining historical data, training multiple machine learning models, evaluating them using metrics such as R², RMSE, MAE, Accuracy, and Weighted F1 Score, and selecting the best-performing models. The selected models are saved as the current models, while previous model versions are retained in `models/versions`.
+- 
+- ### **Student-Facing Application — `WayPoint.py`**
+- 
+- WayPoint.py is the student-facing application. It loads the best-performing models selected by `training.py` from `models/current` and uses them to provide performance prediction, risk classification, SHAP-based explanations, recommendations, and Dream Score analysis.
+- 
+- The application does not retrain the models when it is opened. It uses the saved models produced by the training process. When `training.py` is run again, the models can be updated and a new model version is saved without losing previous versions.
+```
 
 ### **Complete WayPoint Workflow**
 
