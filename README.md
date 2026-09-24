@@ -93,6 +93,201 @@ This keeps the complete workflow organized as:
 
 Data Generation → Training → Evaluation → Model Selection → Versioning → Current Model → Prediction
 
+# WayPoint — Installation & Execution Guide
+
+## Step 1 — Install the Required Software
+
+Install the following if they are not already installed:
+
+- **Python** — required to run WayPoint.
+- **Git** — required to clone the WayPoint repository.
+
+**Visual Studio Code is not required to run the project.**
+
+Open **Windows PowerShell** directly from the Start Menu.
+
+Verify Python:
+
+```powershell
+python --version
+```
+
+Verify Git:
+
+```powershell
+git --version
+```
+
+Both commands should display their installed versions.
+
+---
+
+## Step 2 — Clone the WayPoint Repository
+
+In **Windows PowerShell**, run:
+
+```powershell
+git clone https://github.com/Mohan-Sai-Karthikeya101/WayPoint.git
+```
+
+Enter the project folder:
+
+```powershell
+cd WayPoint
+```
+
+All further commands can be executed directly in **Windows PowerShell**.
+
+---
+
+## Step 3 — Create and Activate the Python Environment
+
+Create the virtual environment:
+
+```powershell
+python -m venv .venv
+```
+
+Activate it:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks activation, run:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+```
+
+Then activate the environment again:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+---
+
+## Step 4 — Install the Required Libraries
+
+Run:
+
+```powershell
+pip install -r requirements.txt
+```
+
+The `requirements.txt` file is already included in the WayPoint repository. `pip` reads this file and automatically installs the libraries required by the project.
+
+---
+
+## Step 5 — Run the Student Application
+
+Run:
+
+```powershell
+python WayPoint.py
+```
+
+The WayPoint student application loads the saved models from:
+
+```text
+models/current
+```
+
+The repository already contains the current trained models, so no separate model download or manual model linking is required.
+
+The application accepts the following six parameters:
+
+1. **Study Hours**
+2. **Phone Usage Hours**
+3. **Days Before Exam Preparation**
+4. **Assignment Percentage**
+5. **Attendance Percentage**
+6. **Previous Marks**
+
+WayPoint then provides:
+
+- **Predicted Performance Score**
+- **Risk Classification**
+- **SHAP-Based Explanation**
+- **Personalized Recommendations**
+- **Dream Score Analysis**
+
+---
+
+## Step 6 — Train and Update the Models
+
+To generate new training data, train the models, evaluate them, and update the current models, run:
+
+```powershell
+python training.py
+```
+
+The training system:
+
+- Generates new synthetic student data.
+- Retains historical training data.
+- Trains multiple candidate models.
+- Evaluates their performance.
+- Selects the best-performing models.
+- Saves a new model version.
+- Updates the models used by the application.
+
+Performance prediction models are evaluated using:
+
+**R², RMSE, and MAE**
+
+Risk classification models are evaluated using:
+
+**Accuracy and Weighted F1 Score**
+
+The selected model versions are stored in:
+
+```text
+models/versions
+```
+
+The currently selected models are stored in:
+
+```text
+models/current
+```
+
+Previous model versions are retained rather than being overwritten, allowing the project to maintain a history of trained models.
+
+---
+
+## Step 7 — Run the Updated Student Application
+
+After training is complete, run:
+
+```powershell
+python WayPoint.py
+```
+
+WayPoint automatically loads the newly selected models from:
+
+```text
+models/current
+```
+
+No changes to the application code are required after retraining.
+
+---
+
+## Complete Workflow
+
+The complete WayPoint workflow is:
+
+**Data Generation → Historical Data → Model Training → Model Evaluation → Best Model Selection → Model Versioning → Current Model → Student Application**
+
+The training and application components are separated:
+
+- **`training.py`** handles data generation, historical data, training, evaluation, model selection, persistence, and versioning.
+- **`WayPoint.py`** loads the saved current models and provides the student-facing prediction and analysis interface.
+
+This allows the student application to run using the saved models without retraining every time it is opened.
+
 # Team
 
 | Name                 | Department | Roll Number |
