@@ -1,7 +1,7 @@
 <h1 align="center">WayPoint</h1>
-                            
+
 <blockquote align="center">
-  <samp><i>“Don’t just predict where you are. Understand where you can go.”</i></samp>
+  <h2><i>“Don’t just predict where you are. Understand where you can go.”</i></h2>
 </blockquote>
 
 
