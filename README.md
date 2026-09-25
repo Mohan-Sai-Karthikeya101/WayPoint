@@ -4,33 +4,15 @@
   <h2><i>“Don’t just predict where you are. Understand where you can go.”</i></h2>
 </blockquote>
 
-
-
 WayPoint is an end-to-end machine learning system designed to analyse student academic performance and identify students who may require additional academic support.
 
-The system takes six parameters from a student: study hours, phone usage, days before exam preparation, assignment percentage, attendance percentage, and previous marks. These parameters are analysed using trained machine learning models to predict expected performance and classify the student into an academic risk category.
+The system takes six parameters from a student: study hours, phone usage, days before exam preparation, assignment percentage, attendance, and previous marks. These parameters are analysed using trained machine learning models to predict expected performance and classify the student into an academic risk category.
 
 WayPoint goes beyond simply predicting a result. It uses SHAP explainability to show which factors contributed most to a prediction, provides practical recommendations for students who need support, and introduces Dream Score, which allows a student to enter a desired target score and explore which areas could be improved to work towards it.
 
-## Novelty Features
+# Novelty Features
 
-### *1. SHAP-Based Explainability*
-
-WayPoint does not only provide a prediction; it explains which input parameters contributed most to the predicted performance and risk classification. This makes the model's output more understandable and actionable.
-
-### *2. Dream Score Analysis*
-
-Students can enter a desired target score, and WayPoint analyses what areas could be improved to work towards that target. The recommendations are constrained to practical and realistic changes rather than unrealistic study schedules or phone-usage reductions.
-
-### *3. Persistent Learning & Model Versioning*
-
-WayPoint retains historical training data and previous model versions instead of replacing them after every training run. Compatible previous models can be used for continued training, allowing the system to build on earlier learning.
-
-Each training run creates a new model version, while the selected model is stored separately as the **current model** used by the application. This provides model history, backup, and controlled updates without losing previous versions.
-
-### *4. Training–Application Separation*
-
-## Training–Application Separation
+## *1. Training–Application Separation*
 
 WayPoint has two separate parts that work together:
 
@@ -44,9 +26,22 @@ WayPoint has two separate parts that work together:
 
 **The application does not retrain the models when it is opened.** It uses the saved models produced by the training process. When `training.py` is run again, the models can be updated and a **new model version is saved without losing previous versions.**
 
-### **Complete WayPoint Workflow**
+## *2. Persistent Learning & Model Versioning*
 
-**Data Generation → Historical Data → Model Training → Model Evaluation → Best Model Selection → Model Versioning → Current Model → Student Application → Prediction & Analysis**
+WayPoint retains historical training data and previous model versions instead of replacing them after every training run. Compatible previous models can be used for continued training, allowing the system to build on earlier learning.
+
+Each training run creates a new model version, while the selected model is stored separately as the **current model** used by the application. This provides model history, backup, and controlled updates without losing previous versions.
+
+## *3. SHAP-Based Explainability*
+
+WayPoint does not only provide a prediction; it explains which input parameters contributed most to the predicted performance and risk classification. This makes the model's output more understandable and actionable.
+
+## *4. Dream Score Analysis*
+
+Students can enter a desired target score, and WayPoint analyses what areas could be improved to work towards that target. The recommendations are constrained to practical and realistic changes rather than unrealistic study schedules or phone-usage reductions.
+
+
+
 
  # *What Problem It Solves & Why It Is Unique*
 
@@ -55,19 +50,6 @@ A conventional student-performance prediction system generally answers “What i
 WayPoint addresses this gap by combining prediction, risk classification, SHAP-based explanation, recommendations, and Dream Score in one workflow. The student can see their current position, understand the factors influencing the prediction, and then explore a desired target through a model-based improvement scenario.
 
 What makes it distinctive is that the system connects prediction → explanation → actionable improvement → target-based planning, rather than treating prediction as the final output.
-
-# *Risk Classification*
-
-WayPoint classifies students into five categories:
-
-Very High Risk, High Risk, Moderate Risk, Low Risk, and Very Low Risk.
-
-These categories are not determined using manually fixed ranges such as "below 50 marks = High Risk."
-
-The classification model learns the relationship between the six input parameters and the training outcomes. During training, it learns decision boundaries that separate the different risk classes. When a new student is analysed, their parameters are passed through the trained classifier, which determines which learned region they belong to.
-
-This means the risk boundaries are learned from the training data and the model rather than being hard-coded into the application.
-
 
 # *Persistent Learning & Model Versioning*
 
@@ -85,6 +67,38 @@ Every trained model is saved as a separate version instead of simply overwriting
 
 This gives WayPoint a persistent training workflow where the project can continue improving while previous model versions remain available.
 
+# *Risk Classification*
+
+WayPoint classifies students into five categories:
+
+Very High Risk, High Risk, Moderate Risk, Low Risk, and Very Low Risk.
+
+These categories are not determined using manually fixed ranges such as "below 50 marks = High Risk."
+
+The classification model learns the relationship between the six input parameters and the training outcomes. During training, it learns decision boundaries that separate the different risk classes. When a new student is analysed, their parameters are passed through the trained classifier, which determines which learned region they belong to.
+
+This means the risk boundaries are learned from the training data and the model rather than being hard-coded into the application.
+
+
+## Overview
+
+**WayPoint** is an end-to-end machine learning system designed to predict and analyse student academic performance using six key parameters: **study hours, phone usage hours, days before exam preparation, assignment percentage, attendance percentage, and previous marks**.
+
+The system uses two separate machine learning tasks. A **regression model** predicts the student's expected final performance score as a continuous value, while a **classification model** determines which learned risk category the student belongs to: **Very High Risk, High Risk, Moderate Risk, Low Risk, or Very Low Risk**.
+
+WayPoint does not rely on manually defined rules for assigning risk categories. The classification models learn patterns and decision boundaries from the training data and use those learned patterns to classify new students.
+
+The system also provides **SHAP-based explainability**, allowing students to understand which input factors contributed most to their prediction. Based on the prediction and input factors, WayPoint provides practical recommendations for improvement.
+
+A major feature of WayPoint is **Dream Score Analysis**, where a student can enter a desired target score and analyse which areas could be improved to work towards that target using realistic changes rather than impractical recommendations.
+
+WayPoint also includes **persistent learning and model versioning**. Historical training data is retained, previous model versions are preserved, and compatible models can be continued during subsequent training runs. The best-performing models are selected after evaluation and stored separately as the current models used by the application.
+
+The project separates the **training system (`training.py`)** from the **student-facing application (`WayPoint.py`)**. The training system handles data generation, training, evaluation, model selection, and versioning, while the application loads the saved models and performs prediction, risk classification, explainability, recommendations, and Dream Score analysis.
+
+Overall, WayPoint follows a complete machine learning pipeline:
+
+**Data Generation → Model Training → Evaluation → Best Model Selection → Model Versioning → Current Models → Student Prediction → Risk Classification → Explainability → Recommendations → Dream Score Analysis**
 
 
 # WayPoint — Installation & Execution Guide
@@ -104,6 +118,7 @@ Verify Python:
 ```powershell
 python --version
 ```
+
 
 Verify Git:
 
@@ -268,18 +283,7 @@ No changes to the application code are required after retraining.
 
 ---
 
-## Complete Workflow
 
-The complete WayPoint workflow is:
-
-**Data Generation → Historical Data → Model Training → Model Evaluation → Best Model Selection → Model Versioning → Current Model → Student Application**
-
-The training and application components are separated:
-
-- **`training.py`** handles data generation, historical data, training, evaluation, model selection, persistence, and versioning.
-- **`WayPoint.py`** loads the saved current models and provides the student-facing prediction and analysis interface.
-
-This allows the student application to run using the saved models without retraining every time it is opened.
 
 # Team
 
