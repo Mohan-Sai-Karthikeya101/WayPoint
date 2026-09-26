@@ -1418,7 +1418,7 @@ def main():
 
         return
 
-       print(
+    print(
         "\nModels loaded successfully."
     )
 
