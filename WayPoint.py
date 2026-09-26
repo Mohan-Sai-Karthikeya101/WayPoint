@@ -427,35 +427,26 @@ def _format_feature_value(feature, value):
     return f"{value:.1f} hours"
 
 
-def _score_direction_text(feature, shap_value):
+def _score_direction_text(shap_value):
 
     if shap_value > 0:
-        return "pushed the predicted score upward"
+        return "contributed upward to the predicted score"
 
     if shap_value < 0:
-        return "pushed the predicted score downward"
+        return "contributed downward to the predicted score"
 
-    return "had almost no effect on the predicted score"
+    return "had very little influence on the predicted score"
 
 
 def _risk_direction_text(shap_value, predicted_risk):
 
     if shap_value > 0:
-        return (
-            f"pushed the risk model toward the predicted "
-            f"{predicted_risk} class"
-        )
+        return f"supported the {predicted_risk} classification"
 
     if shap_value < 0:
-        return (
-            f"pushed the risk model away from the predicted "
-            f"{predicted_risk} class"
-        )
+        return f"worked against the {predicted_risk} classification"
 
-    return (
-        f"had almost no effect on the predicted "
-        f"{predicted_risk} class"
-    )
+    return f"had very little influence on the {predicted_risk} classification"
 
 
 def _relative_strength(impact, strongest_impact):
@@ -487,55 +478,41 @@ def _build_score_summary(feature_impacts, student):
 
     if not meaningful:
         return (
-            "The score model found no meaningful feature-level "
-            "SHAP influence for this prediction."
+            "The model did not find any strong factors to highlight "
+            "for this score."
         )
 
     top = meaningful[:3]
-    strongest = abs(top[0][1])
-
     descriptions = []
 
     for feature, impact in top:
         name = _feature_display_name(feature)
-        value = _format_feature_value(
-            feature,
-            float(student[feature])
-        )
-        strength = _relative_strength(
-            impact,
-            strongest
-        )
-        direction = _score_direction_text(
-            feature,
-            impact
-        )
+        value = _format_feature_value(feature, float(student[feature]))
+
+        if impact > 0:
+            direction = "pushed the predicted score upward"
+        elif impact < 0:
+            direction = "pulled the predicted score downward"
+        else:
+            direction = "had very little influence on the predicted score"
 
         descriptions.append(
-            f"{name} ({value}) had a {strength} influence and "
-            f"{direction}"
+            f"{name} ({value}) {direction}"
         )
 
     if len(descriptions) == 1:
-        return descriptions[0] + "."
-
-    if len(descriptions) == 2:
+        joined = descriptions[0]
+    elif len(descriptions) == 2:
         joined = descriptions[0] + " and " + descriptions[1]
     else:
         joined = (
-            descriptions[0]
-            + ", "
-            + descriptions[1]
-            + ", and "
-            + descriptions[2]
+            descriptions[0] + ", " + descriptions[1] + ", and " + descriptions[2]
         )
 
     return (
-        f"The score prediction was driven mainly by {joined}. "
-        "The direction describes how each feature affected this "
-        "specific prediction relative to the model's baseline; "
-        "it does not mean that increasing or decreasing the feature "
-        "would necessarily improve the score."
+        f"The strongest influences on your predicted score were {joined}. "
+        "These factors explain how the values you entered shaped this "
+        "particular prediction."
     )
 
 
@@ -549,33 +526,26 @@ def _build_risk_summary(risk_impacts, student, predicted_risk):
 
     if not meaningful:
         return (
-            "The risk model found no meaningful feature-level "
-            "SHAP influence for this prediction."
+            f"The model did not find any strong factors to highlight "
+            f"for your {predicted_risk} result."
         )
 
     top = meaningful[:3]
-    strongest = abs(top[0][1])
-
     descriptions = []
 
     for feature, impact in top:
         name = _feature_display_name(feature)
-        value = _format_feature_value(
-            feature,
-            float(student[feature])
-        )
-        strength = _relative_strength(
-            impact,
-            strongest
-        )
-        direction = _risk_direction_text(
-            impact,
-            predicted_risk
-        )
+        value = _format_feature_value(feature, float(student[feature]))
+
+        if impact > 0:
+            direction = f"supported the {predicted_risk} result"
+        elif impact < 0:
+            direction = f"pulled the prediction away from {predicted_risk}"
+        else:
+            direction = f"had very little influence on the {predicted_risk} result"
 
         descriptions.append(
-            f"{name} ({value}) had a {strength} influence and "
-            f"{direction}"
+            f"{name} ({value}) {direction}"
         )
 
     if len(descriptions) == 1:
@@ -584,19 +554,13 @@ def _build_risk_summary(risk_impacts, student, predicted_risk):
         joined = descriptions[0] + " and " + descriptions[1]
     else:
         joined = (
-            descriptions[0]
-            + ", "
-            + descriptions[1]
-            + ", and "
-            + descriptions[2]
+            descriptions[0] + ", " + descriptions[1] + ", and " + descriptions[2]
         )
 
     return (
-        f"For the predicted {predicted_risk} risk level, the strongest "
-        f"model influences were {joined}. "
-        "A positive SHAP direction means the feature pushed the model "
-        "toward the selected risk class, while a negative direction "
-        "means it pushed the model away from that class."
+        f"The strongest factors behind your {predicted_risk} result were {joined}. "
+        "These factors explain how the values you entered shaped this "
+        "particular prediction."
     )
 
 
@@ -760,6 +724,164 @@ def generate_shap_explanation(
         )
 
         print(error)
+
+
+# ============================================================
+# PERSONALIZED RECOMMENDATIONS
+# ============================================================
+
+def generate_recommendations(
+    student,
+    risk
+):
+
+    recommendations = []
+
+    if student["study_hours"] < 2:
+
+        target_study = min(
+            student["study_hours"] + 1.5,
+            4.5
+        )
+
+        recommendations.append(
+            f"Increase focused study time gradually "
+            f"to around {target_study:.1f} hours per day."
+        )
+
+    elif student["study_hours"] < 4:
+
+        target_study = min(
+            student["study_hours"] + 1.0,
+            5.0
+        )
+
+        recommendations.append(
+            f"Try increasing focused study time to "
+            f"around {target_study:.1f} hours per day."
+        )
+
+    else:
+
+        recommendations.append(
+            "Maintain your current study duration "
+            "while focusing on study quality."
+        )
+
+    if student["phone_hours"] > 6:
+
+        target_phone = max(
+            student["phone_hours"] - 2.0,
+            2.0
+        )
+
+        recommendations.append(
+            f"Reduce recreational phone usage gradually "
+            f"toward about {target_phone:.1f} hours per day."
+        )
+
+    elif student["phone_hours"] > 4:
+
+        target_phone = max(
+            student["phone_hours"] - 1.0,
+            2.0
+        )
+
+        recommendations.append(
+            f"Try reducing recreational phone usage "
+            f"toward about {target_phone:.1f} hours per day."
+        )
+
+    else:
+
+        recommendations.append(
+            "Keep phone usage controlled during "
+            "dedicated study sessions."
+        )
+
+    if student["days_before_exam"] <= 3:
+
+        recommendations.append(
+            "Start exam preparation earlier instead "
+            "of waiting until the final few days."
+        )
+
+    elif student["days_before_exam"] <= 7:
+
+        recommendations.append(
+            "Try beginning structured preparation "
+            "at least one to two weeks before exams."
+        )
+
+    else:
+
+        recommendations.append(
+            "Continue using your early preparation "
+            "advantage with regular revision."
+        )
+
+    if student["assignment_percentage"] < 70:
+
+        recommendations.append(
+            "Aim to submit at least 80–90% of "
+            "assignments on time."
+        )
+
+    elif student["assignment_percentage"] < 85:
+
+        recommendations.append(
+            "Try to move assignment completion "
+            "closer to 90% or above."
+        )
+
+    else:
+
+        recommendations.append(
+            "Maintain your strong assignment "
+            "submission consistency."
+        )
+
+    if student["attendance_percentage"] < 70:
+
+        recommendations.append(
+            "Improve class attendance wherever possible "
+            "and avoid unnecessary absences."
+        )
+
+    elif student["attendance_percentage"] < 85:
+
+        recommendations.append(
+            "Try to maintain attendance above 85%."
+        )
+
+    else:
+
+        recommendations.append(
+            "Maintain your current attendance level."
+        )
+
+    if student["previous_marks"] < 50:
+
+        recommendations.append(
+            "Spend additional time revising fundamentals "
+            "and topics where previous marks were weak."
+        )
+
+    elif student["previous_marks"] < 70:
+
+        recommendations.append(
+            "Focus on strengthening weaker subjects "
+            "and practicing more exam-style questions."
+        )
+
+    else:
+
+        recommendations.append(
+            "Use your previous academic performance "
+            "as a foundation while targeting further improvement."
+        )
+
+    return recommendations
 
 
 # ============================================================
@@ -1215,6 +1337,25 @@ def run_prediction(
         X,
         student
     )
+
+    print("\n" + "=" * 70)
+
+    print(
+        "PERSONALIZED RECOMMENDATIONS"
+    )
+
+    print("=" * 70)
+
+    recommendations = generate_recommendations(
+        student,
+        predicted_risk
+    )
+
+    for recommendation in recommendations:
+
+        print(
+            f"\n• {recommendation}"
+        )
 
     if predicted_risk in {
         "Very High Risk",
