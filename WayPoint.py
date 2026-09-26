@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import tempfile
+import itertools
 
 import joblib
 import pandas as pd
@@ -609,7 +610,7 @@ def generate_shap_explanation(
     print("\n" + "=" * 70)
 
     print(
-        "MODEL-BASED EXPLAINABILITY (SHAP)"
+        "MODEL-BASED SHAP EXPLAINABILITY"
     )
 
     print("=" * 70)
@@ -762,21 +763,13 @@ def generate_shap_explanation(
 
 
 # ============================================================
-# DREAM SCORE INPUT
+# DREAM SCORE
 # ============================================================
 
 def get_dream_score():
 
-    print("\n" + "=" * 70)
-
     print(
-        "DREAM SCORE"
-    )
-
-    print("=" * 70)
-
-    print(
-        "\nEnter the score you would like to target."
+        "\\nEnter the score you would like to target."
     )
 
     return get_float_input(
@@ -786,19 +779,103 @@ def get_dream_score():
     )
 
 
-# ============================================================
-# DREAM SCORE PLAN
-# ============================================================
+def _dream_score_shap_features(
+    score_model,
+    X,
+    student,
+    max_features=3
+):
+
+    """Return the most influential features according to SHAP."""
+
+    if shap is None:
+        return FEATURES[:max_features]
+
+    try:
+        explainer = shap.TreeExplainer(score_model)
+        shap_values = explainer(
+            X,
+            check_additivity=False
+        )
+
+        values = _normalise_shap_values(shap_values)
+
+        ranked = sorted(
+            zip(FEATURES, values),
+            key=lambda item: abs(float(item[1])),
+            reverse=True
+        )
+
+        return [
+            feature
+            for feature, impact in ranked[:max_features]
+            if abs(float(impact)) > 1e-9
+        ] or FEATURES[:max_features]
+
+    except Exception:
+        return FEATURES[:max_features]
+
+
+def _dream_candidate_values(feature, current_value):
+
+    """Create realistic candidate values around the student's current value."""
+
+    limits = {
+        "study_hours": (0.25, 8.0, 0.5),
+        "phone_hours": (0.0, 10.0, 0.5),
+        "days_before_exam": (1.0, 30.0, 2.0),
+        "assignment_percentage": (20.0, 100.0, 5.0),
+        "attendance_percentage": (40.0, 100.0, 5.0),
+        "previous_marks": (20.0, 100.0, 5.0)
+    }
+
+    minimum, maximum, step = limits[feature]
+    current_value = float(current_value)
+
+    # Test both directions. The trained model decides which direction
+    # actually helps; no hardcoded "good/bad" rule is used here.
+    candidates = {
+        current_value,
+        max(minimum, min(maximum, current_value - step)),
+        max(minimum, min(maximum, current_value + step)),
+        max(minimum, min(maximum, current_value - 2 * step)),
+        max(minimum, min(maximum, current_value + 2 * step))
+    }
+
+    return sorted(candidates)
+
+
+def _dream_candidate_dataframe(student, changes):
+
+    candidate = dict(student)
+    candidate.update(changes)
+
+    return create_input_dataframe(candidate), candidate
+
+
+def _dream_change_amount(feature, current_value, target_value):
+
+    limits = {
+        "study_hours": 8.0,
+        "phone_hours": 10.0,
+        "days_before_exam": 30.0,
+        "assignment_percentage": 100.0,
+        "attendance_percentage": 100.0,
+        "previous_marks": 100.0
+    }
+
+    return abs(float(target_value) - float(current_value)) / limits[feature]
+
 
 def create_dream_score_plan(
     student,
     current_score,
-    dream_score
+    dream_score,
+    score_model,
+    risk_model
 ):
 
-    gap = dream_score - current_score
-
-    print("\n" + "=" * 70)
+    print("\\n" + "=" * 70)
 
     print(
         "DREAM SCORE PATH"
@@ -807,224 +884,220 @@ def create_dream_score_plan(
     print("=" * 70)
 
     print(
-        f"\nCurrent predicted score : "
-        f"{current_score:.2f}"
+        f"\\nCurrent predicted score : {current_score:.2f}"
     )
 
     print(
-        f"Dream Score             : "
-        f"{dream_score:.2f}"
+        f"Dream Score             : {dream_score:.2f}"
     )
+
+    gap = dream_score - current_score
 
     if gap <= 0:
 
         print(
-            "\nYour current predicted score already "
+            "\\nYour current predicted score already "
             "reaches your Dream Score."
         )
 
         print(
-            "\nFocus on maintaining your current habits "
-            "and avoiding a decline."
+            "The trained model does not identify a higher target "
+            "as necessary from the information provided."
         )
 
         return
 
-    print(
-        f"\nScore improvement needed : "
-        f"approximately {gap:.2f} points"
+    X = create_input_dataframe(student)
+
+    # SHAP decides which features are most influential for this student.
+    influential_features = _dream_score_shap_features(
+        score_model,
+        X,
+        student,
+        max_features=3
     )
 
-    print(
-        "\nRecommended areas to focus on:\n"
-    )
+    # The ML score model evaluates every realistic candidate combination.
+    # No fixed threshold determines whether a feature should be changed.
+    candidate_lists = [
+        _dream_candidate_values(
+            feature,
+            student[feature]
+        )
+        for feature in influential_features
+    ]
 
-    print(
-        "1. Study time"
-    )
+    candidates = []
 
-    study_increase = min(
-        max(0.5, gap / 12),
-        2.0
-    )
+    for values in itertools.product(*candidate_lists):
 
-    target_study = min(
-        student["study_hours"] + study_increase,
-        6.0
-    )
-
-    print(
-        f"   Current : "
-        f"{student['study_hours']:.1f} hours/day"
-    )
-
-    print(
-        f"   Target  : "
-        f"approximately {target_study:.1f} hours/day"
-    )
-
-    print(
-        f"   Increase: approximately "
-        f"{max(0, target_study - student['study_hours']):.1f} "
-        f"hours/day"
-    )
-
-    print(
-        "\n2. Phone usage"
-    )
-
-    if student["phone_hours"] > 3:
-
-        phone_reduction = min(
-            max(0.5, gap / 15),
-            2.0
+        changes = dict(
+            zip(influential_features, values)
         )
 
-        target_phone = max(
-            student["phone_hours"] - phone_reduction,
-            2.0
+        candidate_X, candidate_student = _dream_candidate_dataframe(
+            student,
+            changes
         )
+
+        try:
+            candidate_score = float(
+                score_model.predict(candidate_X)[0]
+            )
+
+            candidate_score = max(
+                0.0,
+                min(100.0, candidate_score)
+            )
+
+            candidate_risk = str(
+                risk_model.predict(candidate_X)[0]
+            ).strip()
+
+        except Exception:
+            continue
+
+        total_change = sum(
+            _dream_change_amount(
+                feature,
+                student[feature],
+                candidate_student[feature]
+            )
+            for feature in influential_features
+        )
+
+        reaches_target = candidate_score >= dream_score
+        improvement = candidate_score - current_score
+
+        candidates.append({
+            "score": candidate_score,
+            "risk": candidate_risk,
+            "student": candidate_student,
+            "change": total_change,
+            "reaches_target": reaches_target,
+            "improvement": improvement
+        })
+
+    if not candidates:
 
         print(
-            f"   Current : "
-            f"{student['phone_hours']:.1f} hours/day"
+            "\\nThe trained model could not generate a Dream Score path "
+            "from the available candidate scenarios."
         )
 
-        print(
-            f"   Target  : "
-            f"approximately {target_phone:.1f} hours/day"
+        return
+
+    target_candidates = [
+        item
+        for item in candidates
+        if item["reaches_target"]
+    ]
+
+    if target_candidates:
+
+        # Among scenarios that reach the target, prefer the smallest
+        # overall change and then the score closest to the target.
+        best = min(
+            target_candidates,
+            key=lambda item: (
+                item["change"],
+                abs(item["score"] - dream_score)
+            )
         )
 
+        reached_target = True
+
+    else:
+
+        # If the requested score is not reached within the model's
+        # realistic search range, show the highest model-predicted score.
+        best = max(
+            candidates,
+            key=lambda item: (
+                item["score"],
+                -item["change"]
+            )
+        )
+
+        reached_target = False
+
+    print(
+        f"\\nSHAP identified the main factors influencing the current "
+        f"score as: {', '.join(_feature_display_name(f) for f in influential_features)}."
+    )
+
+    print(
+        "\\nThe trained ML model was then used to test realistic "
+        "changes to those factors."
+    )
+
+    if reached_target:
+
         print(
-            f"   Reduction: approximately "
-            f"{student['phone_hours'] - target_phone:.1f} "
-            f"hours/day"
+            f"\\nA model-tested scenario reaches approximately "
+            f"{best['score']:.2f} / 100."
         )
 
     else:
 
         print(
-            "   Phone usage is already relatively controlled."
+            f"\\nThe requested Dream Score was not reached within "
+            f"the tested realistic range. The highest model-predicted "
+            f"scenario was {best['score']:.2f} / 100."
         )
 
     print(
-        "\n3. Exam preparation"
+        "\\nModel-tested changes:"
     )
 
-    if student["days_before_exam"] < 14:
+    for feature in influential_features:
 
-        target_days = min(
-            max(
-                student["days_before_exam"] + 4,
-                10
-            ),
-            21
+        current_value = float(student[feature])
+        target_value = float(best["student"][feature])
+
+        if abs(target_value - current_value) < 1e-9:
+            continue
+
+        name = _feature_display_name(feature)
+        current_display = _format_feature_value(
+            feature,
+            current_value
+        )
+        target_display = _format_feature_value(
+            feature,
+            target_value
         )
 
         print(
-            f"   Current preparation starts about "
-            f"{student['days_before_exam']:.0f} "
-            f"days before the exam."
+            f"   {name}: {current_display} -> {target_display}"
         )
 
-        print(
-            f"   Target  : start structured preparation "
-            f"around {target_days:.0f} days before the exam."
-        )
+    unchanged = all(
+        abs(float(best["student"][feature]) - float(student[feature])) < 1e-9
+        for feature in influential_features
+    )
 
-    else:
+    if unchanged:
 
         print(
-            "   Your preparation timeline is already relatively strong."
+            "   No change to the tested influential factors produced "
+            "a better model-predicted result within the search range."
         )
 
     print(
-        "\n4. Assignments"
-    )
-
-    if student["assignment_percentage"] < 90:
-
-        target_assignment = min(
-            student["assignment_percentage"] + 10,
-            95
-        )
-
-        print(
-            f"   Current : "
-            f"{student['assignment_percentage']:.1f}%"
-        )
-
-        print(
-            f"   Target  : "
-            f"approximately {target_assignment:.1f}%"
-        )
-
-    else:
-
-        print(
-            "   Assignment completion is already strong."
-        )
-
-    print(
-        "\n5. Attendance"
-    )
-
-    if student["attendance_percentage"] < 90:
-
-        target_attendance = min(
-            student["attendance_percentage"] + 5,
-            95
-        )
-
-        print(
-            f"   Current : "
-            f"{student['attendance_percentage']:.1f}%"
-        )
-
-        print(
-            f"   Target  : "
-            f"approximately {target_attendance:.1f}%"
-        )
-
-    else:
-
-        print(
-            "   Attendance is already strong."
-        )
-
-    print(
-        "\n6. Previous academic performance"
-    )
-
-    if student["previous_marks"] < 70:
-
-        print(
-            "   Focus on strengthening the subjects "
-            "and concepts where previous performance was weaker."
-        )
-
-    else:
-
-        print(
-            "   Previous marks are already relatively strong."
-        )
-
-    print("\n" + "-" * 70)
-
-    print(
-        "IMPORTANT:"
+        f"\\nModel-predicted score for this scenario : "
+        f"{best['score']:.2f} / 100"
     )
 
     print(
-        "The Dream Score path is a practical improvement plan, "
-        "not a guarantee of achieving the target score."
+        f"Predicted risk for this scenario       : "
+        f"{best['risk']}"
     )
 
     print(
-        "The recommendations are intentionally kept within "
-        "realistic limits."
+        "\\nThis is a model-based scenario, not a guarantee that "
+        "changing these factors will produce the predicted score."
     )
-
 
 # ============================================================
 # MODEL INFORMATION
@@ -1136,14 +1209,6 @@ def run_prediction(
         f"{predicted_risk}"
     )
 
-    print("\n" + "=" * 70)
-
-    print(
-        "MODEL-BASED EXPLANATION"
-    )
-
-    print("=" * 70)
-
     generate_shap_explanation(
         score_model,
         risk_model,
@@ -1156,24 +1221,6 @@ def run_prediction(
         "High Risk",
         "Moderate Risk"
     }:
-
-        print("\n" + "=" * 70)
-
-        print(
-            "DREAM SCORE OPTION"
-        )
-
-        print("=" * 70)
-
-        print(
-            "\nBecause your predicted risk is in a "
-            "higher-risk category,"
-        )
-
-        print(
-            "you can create a personalized Dream Score "
-            "improvement path."
-        )
 
         while True:
 
@@ -1189,7 +1236,9 @@ def run_prediction(
                 create_dream_score_plan(
                     student,
                     predicted_score,
-                    dream_score
+                    dream_score,
+                    score_model,
+                    risk_model
                 )
 
                 break
@@ -1208,22 +1257,9 @@ def run_prediction(
 
     else:
 
-        print("\n" + "=" * 70)
-
         print(
-            "DREAM SCORE"
-        )
-
-        print("=" * 70)
-
-        print(
-            "\nYour current predicted risk is not in "
-            "the higher-risk group,"
-        )
-
-        print(
-            "so the intervention path is not automatically "
-            "shown."
+            "\nDream Score planning is available for "
+            "higher-risk predictions."
         )
 
     display_model_information(
