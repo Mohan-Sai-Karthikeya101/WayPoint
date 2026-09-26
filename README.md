@@ -294,7 +294,7 @@ No changes to the application code are required after retraining.
 
 
 
-# Team
+# Team - *Dead Pixels*
 
 | Name                 | Department | Roll Number |
 | -------------------- | ---------- | ----------- |
