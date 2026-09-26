@@ -394,35 +394,208 @@ def _normalise_shap_values(shap_values):
     return values
 
 
-def _format_shap_explanation(
-    feature,
-    value,
-    shap_value,
-    score_model=True
-):
+def _feature_display_name(feature):
 
-    direction = (
-        "increased"
-        if shap_value > 0
-        else "decreased"
+    names = {
+        "study_hours": "daily study time",
+        "phone_hours": "phone usage",
+        "days_before_exam": "exam preparation timing",
+        "assignment_percentage": "assignment submission",
+        "attendance_percentage": "attendance",
+        "previous_marks": "previous academic performance"
+    }
+
+    return names.get(
+        feature,
+        feature.replace("_", " ")
     )
 
-    amount = abs(float(shap_value))
 
-    if score_model:
+def _format_feature_value(feature, value):
+
+    if feature in {
+        "assignment_percentage",
+        "attendance_percentage",
+        "previous_marks"
+    }:
+        return f"{value:.1f}%"
+
+    if feature == "days_before_exam":
+        return f"{value:.0f} days"
+
+    return f"{value:.1f} hours"
+
+
+def _score_direction_text(feature, shap_value):
+
+    if shap_value > 0:
+        return "pushed the predicted score upward"
+
+    if shap_value < 0:
+        return "pushed the predicted score downward"
+
+    return "had almost no effect on the predicted score"
+
+
+def _risk_direction_text(shap_value, predicted_risk):
+
+    if shap_value > 0:
         return (
-            f"{feature.replace('_', ' ').title()} "
-            f"({value:.2f}) {direction} the model's "
-            f"predicted score by approximately "
-            f"{amount:.2f} points relative to the model's "
-            f"baseline."
+            f"pushed the risk model toward the predicted "
+            f"{predicted_risk} class"
+        )
+
+    if shap_value < 0:
+        return (
+            f"pushed the risk model away from the predicted "
+            f"{predicted_risk} class"
         )
 
     return (
-        f"{feature.replace('_', ' ').title()} "
-        f"({value:.2f}) contributed to the model's "
-        f"risk prediction with a SHAP impact magnitude "
-        f"of approximately {amount:.3f}."
+        f"had almost no effect on the predicted "
+        f"{predicted_risk} class"
+    )
+
+
+def _relative_strength(impact, strongest_impact):
+
+    strongest = abs(float(strongest_impact))
+    current = abs(float(impact))
+
+    if strongest == 0:
+        return "limited"
+
+    ratio = current / strongest
+
+    if ratio >= 0.70:
+        return "strong"
+
+    if ratio >= 0.35:
+        return "noticeable"
+
+    return "smaller"
+
+
+def _build_score_summary(feature_impacts, student):
+
+    meaningful = [
+        (feature, float(impact))
+        for feature, impact in feature_impacts
+        if abs(float(impact)) > 1e-9
+    ]
+
+    if not meaningful:
+        return (
+            "The score model found no meaningful feature-level "
+            "SHAP influence for this prediction."
+        )
+
+    top = meaningful[:3]
+    strongest = abs(top[0][1])
+
+    descriptions = []
+
+    for feature, impact in top:
+        name = _feature_display_name(feature)
+        value = _format_feature_value(
+            feature,
+            float(student[feature])
+        )
+        strength = _relative_strength(
+            impact,
+            strongest
+        )
+        direction = _score_direction_text(
+            feature,
+            impact
+        )
+
+        descriptions.append(
+            f"{name} ({value}) had a {strength} influence and "
+            f"{direction}"
+        )
+
+    if len(descriptions) == 1:
+        return descriptions[0] + "."
+
+    if len(descriptions) == 2:
+        joined = descriptions[0] + " and " + descriptions[1]
+    else:
+        joined = (
+            descriptions[0]
+            + ", "
+            + descriptions[1]
+            + ", and "
+            + descriptions[2]
+        )
+
+    return (
+        f"The score prediction was driven mainly by {joined}. "
+        "The direction describes how each feature affected this "
+        "specific prediction relative to the model's baseline; "
+        "it does not mean that increasing or decreasing the feature "
+        "would necessarily improve the score."
+    )
+
+
+def _build_risk_summary(risk_impacts, student, predicted_risk):
+
+    meaningful = [
+        (feature, float(impact))
+        for feature, impact in risk_impacts
+        if abs(float(impact)) > 1e-9
+    ]
+
+    if not meaningful:
+        return (
+            "The risk model found no meaningful feature-level "
+            "SHAP influence for this prediction."
+        )
+
+    top = meaningful[:3]
+    strongest = abs(top[0][1])
+
+    descriptions = []
+
+    for feature, impact in top:
+        name = _feature_display_name(feature)
+        value = _format_feature_value(
+            feature,
+            float(student[feature])
+        )
+        strength = _relative_strength(
+            impact,
+            strongest
+        )
+        direction = _risk_direction_text(
+            impact,
+            predicted_risk
+        )
+
+        descriptions.append(
+            f"{name} ({value}) had a {strength} influence and "
+            f"{direction}"
+        )
+
+    if len(descriptions) == 1:
+        joined = descriptions[0]
+    elif len(descriptions) == 2:
+        joined = descriptions[0] + " and " + descriptions[1]
+    else:
+        joined = (
+            descriptions[0]
+            + ", "
+            + descriptions[1]
+            + ", and "
+            + descriptions[2]
+        )
+
+    return (
+        f"For the predicted {predicted_risk} risk level, the strongest "
+        f"model influences were {joined}. "
+        "A positive SHAP direction means the feature pushed the model "
+        "toward the selected risk class, while a negative direction "
+        "means it pushed the model away from that class."
     )
 
 
@@ -454,6 +627,8 @@ def generate_shap_explanation(
 
         return
 
+    score_impacts = []
+
     # --------------------------------------------------------
     # SCORE MODEL
     # --------------------------------------------------------
@@ -473,7 +648,7 @@ def generate_shap_explanation(
             shap_values
         )
 
-        feature_impacts = sorted(
+        score_impacts = sorted(
             zip(
                 FEATURES,
                 values
@@ -482,21 +657,14 @@ def generate_shap_explanation(
             reverse=True
         )
 
+        print("\nWhy this score was predicted:\n")
+
         print(
-            "\nTop factors influencing the predicted score:"
-        )
-
-        for feature, impact in feature_impacts[:6]:
-
-            print(
-                "\n• "
-                + _format_shap_explanation(
-                    feature,
-                    student[feature],
-                    float(impact),
-                    score_model=True
-                )
+            _build_score_summary(
+                score_impacts,
+                student
             )
+        )
 
     except Exception as error:
 
@@ -561,6 +729,10 @@ def generate_shap_explanation(
                 risk_values
             )
 
+            predicted_risk = str(
+                risk_model.predict(X)[0]
+            )
+
         risk_impacts = sorted(
             zip(
                 FEATURES,
@@ -570,21 +742,15 @@ def generate_shap_explanation(
             reverse=True
         )
 
+        print("\nWhy this risk level was predicted:\n")
+
         print(
-            "\nTop factors influencing the predicted risk:"
-        )
-
-        for feature, impact in risk_impacts[:6]:
-
-            print(
-                "\n• "
-                + _format_shap_explanation(
-                    feature,
-                    student[feature],
-                    float(impact),
-                    score_model=False
-                )
+            _build_risk_summary(
+                risk_impacts,
+                student,
+                predicted_risk
             )
+        )
 
     except Exception as error:
 
@@ -593,293 +759,6 @@ def generate_shap_explanation(
         )
 
         print(error)
-
-
-# ============================================================
-# HUMAN-READABLE CONTEXT
-# ============================================================
-
-def generate_explanation(student):
-
-    explanations = []
-
-    if student["study_hours"] < 2:
-
-        explanations.append(
-            "Your daily study time is relatively low."
-        )
-
-    elif student["study_hours"] < 4:
-
-        explanations.append(
-            "Your daily study time is moderate and "
-            "could be increased gradually."
-        )
-
-    else:
-
-        explanations.append(
-            "Your daily study time is relatively strong."
-        )
-
-    if student["phone_hours"] > 6:
-
-        explanations.append(
-            "Your phone usage is high and may be "
-            "reducing time available for focused study."
-        )
-
-    elif student["phone_hours"] > 4:
-
-        explanations.append(
-            "Your phone usage is moderately high and "
-            "reducing it could create more study time."
-        )
-
-    else:
-
-        explanations.append(
-            "Your phone usage is within a relatively "
-            "manageable range."
-        )
-
-    if student["days_before_exam"] <= 3:
-
-        explanations.append(
-            "You begin exam preparation quite close "
-            "to the examination."
-        )
-
-    elif student["days_before_exam"] <= 7:
-
-        explanations.append(
-            "Starting preparation earlier could improve "
-            "your preparation time."
-        )
-
-    else:
-
-        explanations.append(
-            "You start preparing sufficiently early "
-            "before the examination."
-        )
-
-    if student["assignment_percentage"] < 60:
-
-        explanations.append(
-            "Assignment completion is relatively low "
-            "and should be improved."
-        )
-
-    elif student["assignment_percentage"] < 80:
-
-        explanations.append(
-            "Assignment completion is reasonable but "
-            "has room for improvement."
-        )
-
-    else:
-
-        explanations.append(
-            "Assignment completion is strong."
-        )
-
-    if student["attendance_percentage"] < 60:
-
-        explanations.append(
-            "Attendance is relatively low."
-        )
-
-    elif student["attendance_percentage"] < 80:
-
-        explanations.append(
-            "Attendance is moderate and could be improved."
-        )
-
-    else:
-
-        explanations.append(
-            "Attendance is strong."
-        )
-
-    if student["previous_marks"] < 50:
-
-        explanations.append(
-            "Previous academic performance indicates "
-            "that additional academic support may be useful."
-        )
-
-    elif student["previous_marks"] < 70:
-
-        explanations.append(
-            "Previous academic performance is moderate."
-        )
-
-    else:
-
-        explanations.append(
-            "Previous academic performance is relatively strong."
-        )
-
-    return explanations
-
-
-# ============================================================
-# RECOMMENDATIONS
-# ============================================================
-
-def generate_recommendations(
-    student,
-    risk
-):
-
-    recommendations = []
-
-    if student["study_hours"] < 2:
-
-        target_study = min(
-            student["study_hours"] + 1.5,
-            4.5
-        )
-
-        recommendations.append(
-            f"Increase focused study time gradually "
-            f"to around {target_study:.1f} hours per day."
-        )
-
-    elif student["study_hours"] < 4:
-
-        target_study = min(
-            student["study_hours"] + 1.0,
-            5.0
-        )
-
-        recommendations.append(
-            f"Try increasing focused study time to "
-            f"around {target_study:.1f} hours per day."
-        )
-
-    else:
-
-        recommendations.append(
-            "Maintain your current study duration "
-            "while focusing on study quality."
-        )
-
-    if student["phone_hours"] > 6:
-
-        target_phone = max(
-            student["phone_hours"] - 2.0,
-            2.0
-        )
-
-        recommendations.append(
-            f"Reduce recreational phone usage gradually "
-            f"toward about {target_phone:.1f} hours per day."
-        )
-
-    elif student["phone_hours"] > 4:
-
-        target_phone = max(
-            student["phone_hours"] - 1.0,
-            2.0
-        )
-
-        recommendations.append(
-            f"Try reducing recreational phone usage "
-            f"toward about {target_phone:.1f} hours per day."
-        )
-
-    else:
-
-        recommendations.append(
-            "Keep phone usage controlled during "
-            "dedicated study sessions."
-        )
-
-    if student["days_before_exam"] <= 3:
-
-        recommendations.append(
-            "Start exam preparation earlier instead "
-            "of waiting until the final few days."
-        )
-
-    elif student["days_before_exam"] <= 7:
-
-        recommendations.append(
-            "Try beginning structured preparation "
-            "at least one to two weeks before exams."
-        )
-
-    else:
-
-        recommendations.append(
-            "Continue using your early preparation "
-            "advantage with regular revision."
-        )
-
-    if student["assignment_percentage"] < 70:
-
-        recommendations.append(
-            "Aim to submit at least 80–90% of "
-            "assignments on time."
-        )
-
-    elif student["assignment_percentage"] < 85:
-
-        recommendations.append(
-            "Try to move assignment completion "
-            "closer to 90% or above."
-        )
-
-    else:
-
-        recommendations.append(
-            "Maintain your strong assignment "
-            "submission consistency."
-        )
-
-    if student["attendance_percentage"] < 70:
-
-        recommendations.append(
-            "Improve class attendance wherever possible "
-            "and avoid unnecessary absences."
-        )
-
-    elif student["attendance_percentage"] < 85:
-
-        recommendations.append(
-            "Try to maintain attendance above 85%."
-        )
-
-    else:
-
-        recommendations.append(
-            "Maintain your current attendance level."
-        )
-
-    if student["previous_marks"] < 50:
-
-        recommendations.append(
-            "Spend additional time revising fundamentals "
-            "and topics where previous marks were weak."
-        )
-
-    elif student["previous_marks"] < 70:
-
-        recommendations.append(
-            "Focus on strengthening weaker subjects "
-            "and practicing more exam-style questions."
-        )
-
-    else:
-
-        recommendations.append(
-            "Use your previous academic performance "
-            "as a foundation while targeting further improvement."
-        )
-
-    return recommendations
 
 
 # ============================================================
@@ -1271,43 +1150,6 @@ def run_prediction(
         X,
         student
     )
-
-    print("\n" + "=" * 70)
-
-    print(
-        "STUDENT CONTEXT"
-    )
-
-    print("=" * 70)
-
-    explanations = generate_explanation(
-        student
-    )
-
-    for explanation in explanations:
-
-        print(
-            f"\n• {explanation}"
-        )
-
-    print("\n" + "=" * 70)
-
-    print(
-        "PERSONALIZED RECOMMENDATIONS"
-    )
-
-    print("=" * 70)
-
-    recommendations = generate_recommendations(
-        student,
-        predicted_risk
-    )
-
-    for recommendation in recommendations:
-
-        print(
-            f"\n• {recommendation}"
-        )
 
     if predicted_risk in {
         "Very High Risk",
