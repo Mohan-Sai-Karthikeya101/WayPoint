@@ -156,19 +156,11 @@ git --version
 ```
 ## Step 2 — Clone the WayPoint Repository
 
-In **Windows PowerShell**, run the following command:
-
-    git clone https://github.com/Mohan-Sai-Karthikeya101/WayPoint.git
-
-If you get the following error:
-
-    fatal: could not create work tree dir 'WayPoint': Permission denied
-
-your current folder does not allow Git to create the project folder. In that case, first run:
+In Windows PowerShell, first navigate to your home directory:
 
     cd $HOME
 
-Then run the clone command again:
+Then clone the repository:
 
     git clone https://github.com/Mohan-Sai-Karthikeya101/WayPoint.git
 
@@ -176,35 +168,21 @@ Enter the project folder:
 
     cd WayPoint
 
-All further commands can be executed directly in **Windows PowerShell**.
 ---
 
 ## Step 3 — Create and Activate the Python Environment
 
 Create the virtual environment:
 
-```powershell
-python -m venv .venv
-```
+    python -m venv .venv
 
-Activate it:
+Allow PowerShell to activate the environment:
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 
-If PowerShell blocks activation, run:
+Activate the environment:
 
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-```
-
-Then activate the environment again:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
+    .\.venv\Scripts\Activate.ps1
 ---
 
 ## Step 4 — Install the Required Libraries
