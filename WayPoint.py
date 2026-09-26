@@ -566,7 +566,6 @@ def _build_risk_summary(risk_impacts, student, predicted_risk):
 
 def generate_shap_explanation(
     score_model,
-    risk_model,
     X,
     student
 ):
@@ -595,7 +594,7 @@ def generate_shap_explanation(
     score_impacts = []
 
     # --------------------------------------------------------
-    # SCORE MODEL
+    # SCORE MODEL SHAP EXPLANATION
     # --------------------------------------------------------
 
     try:
@@ -635,92 +634,6 @@ def generate_shap_explanation(
 
         print(
             "\nSHAP score explanation could not be generated:"
-        )
-
-        print(error)
-
-    # --------------------------------------------------------
-    # RISK MODEL
-    # --------------------------------------------------------
-
-    try:
-
-        risk_explainer = shap.TreeExplainer(
-            risk_model
-        )
-
-        risk_values = risk_explainer(
-            X,
-            check_additivity=False
-        )
-
-        raw_values = risk_values.values
-
-        # Multiclass TreeExplainer can return:
-        # (samples, features, classes)
-        if getattr(raw_values, "ndim", 0) == 3:
-
-            class_names = list(
-                getattr(
-                    risk_model,
-                    "classes_",
-                    []
-                )
-            )
-
-            predicted_risk = str(
-                risk_model.predict(X)[0]
-            )
-
-            if predicted_risk in class_names:
-
-                class_index = class_names.index(
-                    predicted_risk
-                )
-
-            else:
-
-                class_index = 0
-
-            selected_values = raw_values[
-                0,
-                :,
-                class_index
-            ]
-
-        else:
-
-            selected_values = _normalise_shap_values(
-                risk_values
-            )
-
-            predicted_risk = str(
-                risk_model.predict(X)[0]
-            )
-
-        risk_impacts = sorted(
-            zip(
-                FEATURES,
-                selected_values
-            ),
-            key=lambda item: abs(float(item[1])),
-            reverse=True
-        )
-
-        print("\nWhy this risk level was predicted:\n")
-
-        print(
-            _build_risk_summary(
-                risk_impacts,
-                student,
-                predicted_risk
-            )
-        )
-
-    except Exception as error:
-
-        print(
-            "\nSHAP risk explanation could not be generated:"
         )
 
         print(error)
@@ -1333,7 +1246,6 @@ def run_prediction(
 
     generate_shap_explanation(
         score_model,
-        risk_model,
         X,
         student
     )
