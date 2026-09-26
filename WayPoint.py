@@ -1418,8 +1418,16 @@ def main():
 
         return
 
-    print(
+       print(
         "\nModels loaded successfully."
+    )
+
+    print(
+        f"Model version: {metadata.get('version', 'Unknown')}"
+    )
+
+    print(
+        "Using the current trained model for predictions."
     )
 
     print(
