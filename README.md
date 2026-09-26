@@ -154,23 +154,29 @@ Verify Git installation:
 ```powershell
 git --version
 ```
-
 ## Step 2 — Clone the WayPoint Repository
 
-In **Windows PowerShell**, run:
+In **Windows PowerShell**, run the following command:
 
-```powershell
-git clone https://github.com/Mohan-Sai-Karthikeya101/WayPoint.git
-```
+    git clone https://github.com/Mohan-Sai-Karthikeya101/WayPoint.git
+
+If you get the following error:
+
+    fatal: could not create work tree dir 'WayPoint': Permission denied
+
+your current folder does not allow Git to create the project folder. In that case, first run:
+
+    cd $HOME
+
+Then run the clone command again:
+
+    git clone https://github.com/Mohan-Sai-Karthikeya101/WayPoint.git
 
 Enter the project folder:
 
-```powershell
-cd WayPoint
-```
+    cd WayPoint
 
 All further commands can be executed directly in **Windows PowerShell**.
-
 ---
 
 ## Step 3 — Create and Activate the Python Environment
