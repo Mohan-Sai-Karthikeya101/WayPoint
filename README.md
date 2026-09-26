@@ -110,6 +110,21 @@ Install the following if they are not already installed:
 - **Python** — required to run WayPoint.
 - **Git** — required to clone the WayPoint repository.
 
+### Installing Python
+
+If Python is not already installed:
+
+1. Go to the official Python website:  
+   https://www.python.org/downloads/
+
+2. Download the latest Python version for Windows.
+
+3. Run the downloaded installer.
+
+4. **Important:** Before clicking **Install Now**, make sure to check:
+   **`Add python.exe to PATH`**
+
+5. Complete the installation.
 
 Open **Windows PowerShell** from the Start Menu.
 
@@ -119,16 +134,26 @@ Verify Python:
 python --version
 ```
 
+### Installing Git
 
-Verify Git:
+If Git is not already installed:
+
+1. Go to the official Git website:  
+   [Download Git for Windows](https://git-scm.com/downloads/win)
+
+2. Download **Git for Windows**.
+
+3. Run the downloaded installer.
+
+4. Use the recommended/default options throughout the installation.
+
+5. Once the installation is complete, close and reopen **Windows PowerShell**.
+
+Verify Git installation:
 
 ```powershell
 git --version
 ```
-
-Both commands should display their installed versions.
-
----
 
 ## Step 2 — Clone the WayPoint Repository
 
