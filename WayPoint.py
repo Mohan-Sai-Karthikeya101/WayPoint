@@ -89,6 +89,7 @@ def download_from_github(relative_path, destination):
             dir=destination.parent,
             suffix=".tmp"
         ) as temporary:
+
             temporary.write(data)
             temporary_path = Path(temporary.name)
 
@@ -100,6 +101,7 @@ def download_from_github(relative_path, destination):
         return True
 
     except Exception as error:
+
         print(
             f"\nGitHub fallback could not retrieve "
             f"{relative_path}: {error}"
@@ -109,6 +111,7 @@ def download_from_github(relative_path, destination):
 
 
 def ensure_models_available():
+
     required_files = [
         (
             "models/current/score_model.pkl",
@@ -138,21 +141,27 @@ def ensure_models_available():
     )
 
     if GITHUB_OWNER == "YOUR_GITHUB_USERNAME":
+
         print(
             "GitHub fallback is not configured."
         )
+
         print(
             "Clone the complete WayPoint repository, or set:"
         )
+
         print(
             "WAYPOINT_GITHUB_OWNER"
         )
+
         print(
             "WAYPOINT_GITHUB_REPO"
         )
+
         print(
             "WAYPOINT_GITHUB_BRANCH"
         )
+
         return False
 
     print(
@@ -162,10 +171,12 @@ def ensure_models_available():
     success = True
 
     for relative_path, destination in missing:
+
         if not download_from_github(
             relative_path,
             destination
         ):
+
             success = False
 
     return success
@@ -419,9 +430,11 @@ def _format_feature_value(feature, value):
         "attendance_percentage",
         "previous_marks"
     }:
+
         return f"{value:.1f}%"
 
     if feature == "days_before_exam":
+
         return f"{value:.0f} days"
 
     return f"{value:.1f} hours"
@@ -477,46 +490,77 @@ def _build_score_summary(feature_impacts, student):
     ]
 
     if not meaningful:
+
         return (
             "The model did not find any strong factors to highlight "
             "for this score."
         )
 
     top = meaningful[:3]
+
     descriptions = []
 
     for feature, impact in top:
+
         name = _feature_display_name(feature)
-        value = _format_feature_value(feature, float(student[feature]))
+
+        value = _format_feature_value(
+            feature,
+            float(student[feature])
+        )
 
         if impact > 0:
+
             direction = "pushed the predicted score upward"
+
         elif impact < 0:
+
             direction = "pulled the predicted score downward"
+
         else:
-            direction = "had very little influence on the predicted score"
+
+            direction = (
+                "had very little influence on the predicted score"
+            )
 
         descriptions.append(
             f"{name} ({value}) {direction}"
         )
 
     if len(descriptions) == 1:
+
         joined = descriptions[0]
+
     elif len(descriptions) == 2:
-        joined = descriptions[0] + " and " + descriptions[1]
-    else:
+
         joined = (
-            descriptions[0] + ", " + descriptions[1] + ", and " + descriptions[2]
+            descriptions[0]
+            + " and "
+            + descriptions[1]
+        )
+
+    else:
+
+        joined = (
+            descriptions[0]
+            + ", "
+            + descriptions[1]
+            + ", and "
+            + descriptions[2]
         )
 
     return (
-        f"The strongest influences on your predicted score were {joined}. "
-        "These factors explain how the values you entered shaped this "
-        "particular prediction."
+        f"The strongest influences on your predicted score were "
+        f"{joined}. These factors explain how the values you entered "
+        f"shaped this particular prediction."
     )
 
 
-def _build_risk_summary(risk_impacts, student, predicted_risk):
+def _build_risk_summary(
+    risk_impacts,
+    student,
+    predicted_risk
+):
 
     meaningful = [
         (feature, float(impact))
@@ -525,42 +569,74 @@ def _build_risk_summary(risk_impacts, student, predicted_risk):
     ]
 
     if not meaningful:
+
         return (
             f"The model did not find any strong factors to highlight "
             f"for your {predicted_risk} result."
         )
 
     top = meaningful[:3]
+
     descriptions = []
 
     for feature, impact in top:
+
         name = _feature_display_name(feature)
-        value = _format_feature_value(feature, float(student[feature]))
+
+        value = _format_feature_value(
+            feature,
+            float(student[feature])
+        )
 
         if impact > 0:
-            direction = f"supported the {predicted_risk} result"
+
+            direction = (
+                f"supported the {predicted_risk} result"
+            )
+
         elif impact < 0:
-            direction = f"pulled the prediction away from {predicted_risk}"
+
+            direction = (
+                f"pulled the prediction away from {predicted_risk}"
+            )
+
         else:
-            direction = f"had very little influence on the {predicted_risk} result"
+
+            direction = (
+                f"had very little influence on the "
+                f"{predicted_risk} result"
+            )
 
         descriptions.append(
             f"{name} ({value}) {direction}"
         )
 
     if len(descriptions) == 1:
+
         joined = descriptions[0]
+
     elif len(descriptions) == 2:
-        joined = descriptions[0] + " and " + descriptions[1]
-    else:
+
         joined = (
-            descriptions[0] + ", " + descriptions[1] + ", and " + descriptions[2]
+            descriptions[0]
+            + " and "
+            + descriptions[1]
+        )
+
+    else:
+
+        joined = (
+            descriptions[0]
+            + ", "
+            + descriptions[1]
+            + ", and "
+            + descriptions[2]
         )
 
     return (
-        f"The strongest factors behind your {predicted_risk} result were {joined}. "
-        "These factors explain how the values you entered shaped this "
-        "particular prediction."
+        f"The strongest factors behind your {predicted_risk} result "
+        f"were {joined}. These factors explain how the values you "
+        f"entered shaped this particular prediction."
     )
 
 
@@ -804,7 +880,7 @@ def generate_recommendations(
 def get_dream_score():
 
     print(
-        "\\nEnter the score you would like to target."
+        "\nEnter the score you would like to target."
     )
 
     return get_float_input(
@@ -821,22 +897,34 @@ def _dream_score_shap_features(
     max_features=3
 ):
 
-    """Return the most influential features according to SHAP."""
+    """
+    Return the most influential features according to SHAP.
+    """
 
     if shap is None:
+
         return FEATURES[:max_features]
 
     try:
-        explainer = shap.TreeExplainer(score_model)
+
+        explainer = shap.TreeExplainer(
+            score_model
+        )
+
         shap_values = explainer(
             X,
             check_additivity=False
         )
 
-        values = _normalise_shap_values(shap_values)
+        values = _normalise_shap_values(
+            shap_values
+        )
 
         ranked = sorted(
-            zip(FEATURES, values),
+            zip(
+                FEATURES,
+                values
+            ),
             key=lambda item: abs(float(item[1])),
             reverse=True
         )
@@ -848,58 +936,152 @@ def _dream_score_shap_features(
         ] or FEATURES[:max_features]
 
     except Exception:
+
         return FEATURES[:max_features]
 
 
-def _dream_candidate_values(feature, current_value):
+def _dream_candidate_values(
+    feature,
+    current_value
+):
 
-    """Create realistic candidate values around the student's current value."""
+    """
+    Create realistic candidate values around the student's
+    current value.
+    """
 
     limits = {
-        "study_hours": (0.25, 8.0, 0.5),
-        "phone_hours": (0.0, 10.0, 0.5),
-        "days_before_exam": (1.0, 30.0, 2.0),
-        "assignment_percentage": (20.0, 100.0, 5.0),
-        "attendance_percentage": (40.0, 100.0, 5.0),
-        "previous_marks": (20.0, 100.0, 5.0)
+
+        "study_hours": (
+            0.25,
+            8.0,
+            0.5
+        ),
+
+        "phone_hours": (
+            0.0,
+            10.0,
+            0.5
+        ),
+
+        "days_before_exam": (
+            1.0,
+            30.0,
+            2.0
+        ),
+
+        "assignment_percentage": (
+            20.0,
+            100.0,
+            5.0
+        ),
+
+        "attendance_percentage": (
+            40.0,
+            100.0,
+            5.0
+        ),
+
+        "previous_marks": (
+            20.0,
+            100.0,
+            5.0
+        )
     }
 
     minimum, maximum, step = limits[feature]
-    current_value = float(current_value)
 
-    # Test both directions. The trained model decides which direction
-    # actually helps; no hardcoded "good/bad" rule is used here.
+    current_value = float(
+        current_value
+    )
+
+    # Test both directions. The trained model decides which
+    # direction actually helps; no hardcoded "good/bad" rule
+    # is used here.
+
     candidates = {
+
         current_value,
-        max(minimum, min(maximum, current_value - step)),
-        max(minimum, min(maximum, current_value + step)),
-        max(minimum, min(maximum, current_value - 2 * step)),
-        max(minimum, min(maximum, current_value + 2 * step))
+
+        max(
+            minimum,
+            min(
+                maximum,
+                current_value - step
+            )
+        ),
+
+        max(
+            minimum,
+            min(
+                maximum,
+                current_value + step
+            )
+        ),
+
+        max(
+            minimum,
+            min(
+                maximum,
+                current_value - 2 * step
+            )
+        ),
+
+        max(
+            minimum,
+            min(
+                maximum,
+                current_value + 2 * step
+            )
+        )
     }
 
     return sorted(candidates)
 
 
-def _dream_candidate_dataframe(student, changes):
+def _dream_candidate_dataframe(
+    student,
+    changes
+):
 
     candidate = dict(student)
+
     candidate.update(changes)
 
-    return create_input_dataframe(candidate), candidate
+    return (
+        create_input_dataframe(candidate),
+        candidate
+    )
 
 
-def _dream_change_amount(feature, current_value, target_value):
+def _dream_change_amount(
+    feature,
+    current_value,
+    target_value
+):
 
     limits = {
+
         "study_hours": 8.0,
+
         "phone_hours": 10.0,
+
         "days_before_exam": 30.0,
+
         "assignment_percentage": 100.0,
+
         "attendance_percentage": 100.0,
+
         "previous_marks": 100.0
     }
 
-    return abs(float(target_value) - float(current_value)) / limits[feature]
+    return (
+        abs(
+            float(target_value)
+            - float(current_value)
+        )
+        / limits[feature]
+    )
 
 
 def create_dream_score_plan(
@@ -910,20 +1092,26 @@ def create_dream_score_plan(
     risk_model
 ):
 
-    print("\\n" + "=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
 
     print(
         "DREAM SCORE PATH"
     )
 
-    print("=" * 70)
-
     print(
-        f"\\nCurrent predicted score : {current_score:.2f}"
+        "=" * 70
     )
 
     print(
-        f"Dream Score             : {dream_score:.2f}"
+        f"\nCurrent predicted score : "
+        f"{current_score:.2f}"
+    )
+
+    print(
+        f"Dream Score             : "
+        f"{dream_score:.2f}"
     )
 
     gap = dream_score - current_score
@@ -931,7 +1119,7 @@ def create_dream_score_plan(
     if gap <= 0:
 
         print(
-            "\\nYour current predicted score already "
+            "\nYour current predicted score already "
             "reaches your Dream Score."
         )
 
@@ -942,9 +1130,13 @@ def create_dream_score_plan(
 
         return
 
-    X = create_input_dataframe(student)
+    X = create_input_dataframe(
+        student
+    )
 
-    # SHAP decides which features are most influential for this student.
+    # SHAP decides which features are most influential
+    # for this student.
+
     influential_features = _dream_score_shap_features(
         score_model,
         X,
@@ -952,44 +1144,65 @@ def create_dream_score_plan(
         max_features=3
     )
 
-    # The ML score model evaluates every realistic candidate combination.
-    # No fixed threshold determines whether a feature should be changed.
+    # The ML score model evaluates every realistic candidate
+    # combination. No fixed threshold determines whether a
+    # feature should be changed.
+
     candidate_lists = [
+
         _dream_candidate_values(
             feature,
             student[feature]
         )
+
         for feature in influential_features
     ]
 
     candidates = []
 
-    for values in itertools.product(*candidate_lists):
+    for values in itertools.product(
+        *candidate_lists
+    ):
 
         changes = dict(
-            zip(influential_features, values)
+            zip(
+                influential_features,
+                values
+            )
         )
 
-        candidate_X, candidate_student = _dream_candidate_dataframe(
+        (
+            candidate_X,
+            candidate_student
+        ) = _dream_candidate_dataframe(
             student,
             changes
         )
 
         try:
+
             candidate_score = float(
-                score_model.predict(candidate_X)[0]
+                score_model.predict(
+                    candidate_X
+                )[0]
             )
 
             candidate_score = max(
                 0.0,
-                min(100.0, candidate_score)
+                min(
+                    100.0,
+                    candidate_score
+                )
             )
 
             candidate_risk = str(
-                risk_model.predict(candidate_X)[0]
+                risk_model.predict(
+                    candidate_X
+                )[0]
             ).strip()
 
         except Exception:
+
             continue
 
         total_change = sum(
@@ -998,31 +1211,45 @@ def create_dream_score_plan(
                 student[feature],
                 candidate_student[feature]
             )
+
             for feature in influential_features
         )
 
-        reaches_target = candidate_score >= dream_score
-        improvement = candidate_score - current_score
+        reaches_target = (
+            candidate_score >= dream_score
+        )
+
+        improvement = (
+            candidate_score
+            - current_score
+        )
 
         candidates.append({
+
             "score": candidate_score,
+
             "risk": candidate_risk,
+
             "student": candidate_student,
+
             "change": total_change,
+
             "reaches_target": reaches_target,
+
             "improvement": improvement
         })
 
     if not candidates:
 
         print(
-            "\\nThe trained model could not generate a Dream Score path "
+            "\nThe trained model could not generate a Dream Score path "
             "from the available candidate scenarios."
         )
 
         return
 
     target_candidates = [
+
         item
         for item in candidates
         if item["reaches_target"]
@@ -1032,11 +1259,19 @@ def create_dream_score_plan(
 
         # Among scenarios that reach the target, prefer the smallest
         # overall change and then the score closest to the target.
+
         best = min(
+
             target_candidates,
+
             key=lambda item: (
+
                 item["change"],
-                abs(item["score"] - dream_score)
+
+                abs(
+                    item["score"]
+                    - dream_score
+                )
             )
         )
 
@@ -1046,10 +1281,15 @@ def create_dream_score_plan(
 
         # If the requested score is not reached within the model's
         # realistic search range, show the highest model-predicted score.
+
         best = max(
+
             candidates,
+
             key=lambda item: (
+
                 item["score"],
+
                 -item["change"]
             )
         )
@@ -1057,58 +1297,82 @@ def create_dream_score_plan(
         reached_target = False
 
     print(
-        f"\\nSHAP identified the main factors influencing the current "
-        f"score as: {', '.join(_feature_display_name(f) for f in influential_features)}."
+        f"\nSHAP identified the main factors influencing the current "
+        f"score as: "
+        f"{', '.join(_feature_display_name(f) for f in influential_features)}."
     )
 
     print(
-        "\\nThe trained ML model was then used to test realistic "
+        "\nThe trained ML model was then used to test realistic "
         "changes to those factors."
     )
 
     if reached_target:
 
         print(
-            f"\\nA model-tested scenario reaches approximately "
+            f"\nA model-tested scenario reaches approximately "
             f"{best['score']:.2f} / 100."
         )
 
     else:
 
         print(
-            f"\\nThe requested Dream Score was not reached within "
+            f"\nThe requested Dream Score was not reached within "
             f"the tested realistic range. The highest model-predicted "
             f"scenario was {best['score']:.2f} / 100."
         )
 
     print(
-        "\\nModel-tested changes:"
+        "\nModel-tested changes:"
     )
 
     for feature in influential_features:
 
-        current_value = float(student[feature])
-        target_value = float(best["student"][feature])
+        current_value = float(
+            student[feature]
+        )
 
-        if abs(target_value - current_value) < 1e-9:
+        target_value = float(
+            best["student"][feature]
+        )
+
+        if abs(
+            target_value - current_value
+        ) < 1e-9:
+
             continue
 
-        name = _feature_display_name(feature)
+        name = _feature_display_name(
+            feature
+        )
+
         current_display = _format_feature_value(
             feature,
             current_value
         )
+
         target_display = _format_feature_value(
             feature,
             target_value
         )
 
         print(
-            f"   {name}: {current_display} -> {target_display}"
+            f"   {name}: "
+            f"{current_display} -> "
+            f"{target_display}"
         )
 
     unchanged = all(
-        abs(float(best["student"][feature]) - float(student[feature])) < 1e-9
+
+        abs(
+            float(
+                best["student"][feature]
+            )
+            - float(
+                student[feature]
+            )
+        ) < 1e-9
+
         for feature in influential_features
     )
 
@@ -1120,7 +1384,7 @@ def create_dream_score_plan(
         )
 
     print(
-        f"\\nModel-predicted score for this scenario : "
+        f"\nModel-predicted score for this scenario : "
         f"{best['score']:.2f} / 100"
     )
 
@@ -1130,26 +1394,34 @@ def create_dream_score_plan(
     )
 
     print(
-        "\\nThis is a model-based scenario, not a guarantee that "
+        "\nThis is a model-based scenario, not a guarantee that "
         "changing these factors will produce the predicted score."
     )
+
 
 # ============================================================
 # MODEL INFORMATION
 # ============================================================
 
-def display_model_information(metadata):
+def display_model_information(
+    metadata
+):
 
     if not metadata:
+
         return
 
-    print("\n" + "=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
 
     print(
         "MODEL INFORMATION"
     )
 
-    print("=" * 70)
+    print(
+        "=" * 70
+    )
 
     print(
         f"\nProject                 : "
@@ -1201,11 +1473,15 @@ def run_prediction(
     try:
 
         predicted_score = float(
-            score_model.predict(X)[0]
+            score_model.predict(
+                X
+            )[0]
         )
 
         predicted_risk = str(
-            risk_model.predict(X)[0]
+            risk_model.predict(
+                X
+            )[0]
         ).strip()
 
     except Exception as error:
@@ -1226,13 +1502,17 @@ def run_prediction(
         )
     )
 
-    print("\n" + "=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
 
     print(
         "WAYPOINT - PREDICTION RESULT"
     )
 
-    print("=" * 70)
+    print(
+        "=" * 70
+    )
 
     print(
         f"\nPredicted Final Score : "
@@ -1250,13 +1530,17 @@ def run_prediction(
         student
     )
 
-    print("\n" + "=" * 70)
+    print(
+        "\n" + "=" * 70
+    )
 
     print(
         "PERSONALIZED RECOMMENDATIONS"
     )
 
-    print("=" * 70)
+    print(
+        "=" * 70
+    )
 
     recommendations = generate_recommendations(
         student,
@@ -1282,7 +1566,10 @@ def run_prediction(
                 "(yes/no): "
             ).strip().lower()
 
-            if answer in {"yes", "y"}:
+            if answer in {
+                "yes",
+                "y"
+            }:
 
                 dream_score = get_dream_score()
 
@@ -1296,7 +1583,10 @@ def run_prediction(
 
                 break
 
-            if answer in {"no", "n"}:
+            if answer in {
+                "no",
+                "n"
+            }:
 
                 print(
                     "\nDream Score planning skipped."
@@ -1326,9 +1616,13 @@ def run_prediction(
 
 def main():
 
-    print("\n")
+    print(
+        "\n"
+    )
 
-    print("=" * 70)
+    print(
+        "=" * 70
+    )
 
     print(
         "                         WAYPOINT"
@@ -1338,7 +1632,9 @@ def main():
         "       Explainable Student Academic Risk System"
     )
 
-    print("=" * 70)
+    print(
+        "=" * 70
+    )
 
     score_model, risk_model, metadata = load_models()
 
@@ -1354,7 +1650,8 @@ def main():
     )
 
     print(
-        f"Model version: {metadata.get('version', 'Unknown')}"
+        f"Model version: "
+        f"{metadata.get('version', 'Unknown')}"
     )
 
     print(
@@ -1373,14 +1670,19 @@ def main():
             metadata
         )
 
-        print("\n" + "=" * 70)
+        print(
+            "\n" + "=" * 70
+        )
 
         choice = input(
             "\nWould you like to test another student? "
             "(yes/no): "
         ).strip().lower()
 
-        if choice not in {"yes", "y"}:
+        if choice not in {
+            "yes",
+            "y"
+        }:
 
             print(
                 "\nThank you for using WayPoint."
