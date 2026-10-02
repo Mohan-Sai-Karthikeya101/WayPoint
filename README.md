@@ -299,6 +299,5 @@ No changes to the application code are required after retraining.
 | Name                 | Department | Roll Number |
 | -------------------- | ---------- | ----------- |
 |Mohan Sai Karthikeya | CSE        | 130003184   |
-| Vignesh              | Aerospace  | 130017057   |
 | Boga Chenchu Gagana  | IT         | 130015014   |
 
