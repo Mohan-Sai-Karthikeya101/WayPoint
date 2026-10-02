@@ -189,12 +189,11 @@ print(title)
 print("=" * 72)
 
 def relative_project_path(path):
-"""Return a repository-style path relative to the project root."""
-return str(
-Path(path)
-.resolve()
-.relative_to(BASE_DIR.resolve())
-).replace("\", "/")
+    """Return a repository-style path relative to the project root."""
+    relative_path = Path(path).resolve().relative_to(
+        BASE_DIR.resolve()
+    )
+    return relative_path.as_posix()
 
 # ============================================================
 
