@@ -1,84 +1,46 @@
 # ============================================================
-
 # WAYPOINT
-
 # Explainable Student Academic Risk + Dream Score ML Pipeline
-
 #
-
 # FINAL TRAINING PIPELINE
-
 #
-
 # Every execution:
-
-# 1. Uses the local project state.
-
-# 2. Generates 20,000 NEW training students.
-
-# 3. Generates 10,000 NEW testing students.
-
-# 4. Loads ALL historical training/testing batches.
-
-# 5. Builds fresh ML candidates on all accumulated data.
-
-# 6. Evaluates all candidates on the accumulated test data.
-
-# 7. Selects the best score and risk models.
-
-# 8. Saves a new immutable model version.
-
-# 9. Updates models/current/.
-
-# 10. Writes project_registry.json for reproducible persistence.
-
+#   1. Generates 20,000 new training students.
+#   2. Generates 10,000 new testing students.
+#   3. Loads all historical training/testing batches.
+#   4. Trains fresh ML candidates on all accumulated data.
+#   5. Evaluates all candidates on the accumulated test data.
+#   6. Selects the best score and risk models.
+#   7. Saves a new immutable model version.
+#   8. Updates models/current/.
+#   9. Writes project_registry.json.
 #
-
 # PROJECT:
-
-# WayPoint
-
+#   WayPoint
 #
-
-# REQUIRED MODEL FEATURES:
-
-# study_hours
-
-# phone_hours
-
-# days_before_exam
-
-# assignment_percentage
-
-# attendance_percentage
-
-# previous_marks
-
+# FEATURES:
+#   study_hours
+#   phone_hours
+#   days_before_exam
+#   assignment_percentage
+#   attendance_percentage
+#   previous_marks
 #
-
 # NOT USED:
-
-# recent assessment performance
-
-# study consistency
-
+#   recent assessment performance
+#   study consistency
 #
-
 # IMPORTANT:
-
-# The synthetic-data generator uses a hidden nonlinear process only
-
-# to create training labels. The prediction application does NOT use
-
-# those formulas. The ML models learn the relationships from data.
-
+#   The synthetic-data generator uses a hidden nonlinear process
+#   only to create training labels.
 #
-
-# Historical data is retained and reused on every training run.
-
-# Fresh models are trained on the complete accumulated dataset.
-
+#   The prediction application does NOT use those formulas.
+#   The ML models learn the relationships from the generated data.
+#
+#   Historical data is retained and reused on every training run.
+#   Fresh models are trained on the complete accumulated dataset.
 # ============================================================
+
 
 from pathlib import Path
 from datetime import datetime, timezone
@@ -92,31 +54,30 @@ import numpy as np
 import pandas as pd
 
 from sklearn.tree import (
-DecisionTreeRegressor,
-DecisionTreeClassifier,
+    DecisionTreeRegressor,
+    DecisionTreeClassifier,
 )
 
 from sklearn.ensemble import (
-RandomForestRegressor,
-RandomForestClassifier,
-HistGradientBoostingRegressor,
-HistGradientBoostingClassifier,
+    RandomForestRegressor,
+    RandomForestClassifier,
+    HistGradientBoostingRegressor,
+    HistGradientBoostingClassifier,
 )
 
 from sklearn.metrics import (
-r2_score,
-mean_squared_error,
-mean_absolute_error,
-accuracy_score,
-f1_score,
+    r2_score,
+    mean_squared_error,
+    mean_absolute_error,
+    accuracy_score,
+    f1_score,
 )
 
 warnings.filterwarnings("ignore")
 
+
 # ============================================================
-
 # 1. PROJECT CONFIGURATION
-
 # ============================================================
 
 PROJECT_NAME = "WayPoint"
@@ -127,34 +88,34 @@ TESTING_BATCH_SIZE = 10_000
 RANDOM_SEED = 42
 
 FEATURES = [
-"study_hours",
-"phone_hours",
-"days_before_exam",
-"assignment_percentage",
-"attendance_percentage",
-"previous_marks",
+    "study_hours",
+    "phone_hours",
+    "days_before_exam",
+    "assignment_percentage",
+    "attendance_percentage",
+    "previous_marks",
 ]
 
 SCORE_TARGET = "final_score"
+
 RISK_TARGET = "risk_category"
 
 RISK_ORDER = [
-"Very High Risk",
-"High Risk",
-"Moderate Risk",
-"Low Risk",
-"Very Low Risk",
+    "Very High Risk",
+    "High Risk",
+    "Moderate Risk",
+    "Low Risk",
+    "Very Low Risk",
 ]
 
 REGISTRY_FILENAME = "project_registry.json"
 
-# ============================================================
 
+# ============================================================
 # 2. PROJECT DIRECTORIES
-
 # ============================================================
 
-BASE_DIR = Path(**file**).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent
 
 TRAINING_DATA_DIR = BASE_DIR / "data" / "training"
 TESTING_DATA_DIR = BASE_DIR / "data" / "testing"
@@ -164,1641 +125,1660 @@ VERSIONS_DIR = BASE_DIR / "models" / "versions"
 
 REGISTRY_PATH = BASE_DIR / REGISTRY_FILENAME
 
+
 for directory in [
-TRAINING_DATA_DIR,
-TESTING_DATA_DIR,
-CURRENT_MODEL_DIR,
-VERSIONS_DIR,
-]:
-directory.mkdir(parents=True, exist_ok=True)
-
-# ============================================================
-
-# 3. SMALL UTILITY FUNCTIONS
-
-# ============================================================
-
-def utc_now():
-"""Return a timezone-aware UTC timestamp."""
-return datetime.now(timezone.utc).isoformat()
-
-def print_section(title):
-print("\n")
-print("=" * 72)
-print(title)
-print("=" * 72)
-
-def relative_project_path(path):
-    """Return a repository-style path relative to the project root."""
-    relative_path = Path(path).resolve().relative_to(
-        BASE_DIR.resolve()
-    )
-    return relative_path.as_posix()
-
-# ============================================================
-
-# 4. LOCAL PROJECT REGISTRY
-
-# ============================================================
-
-def load_registry():
-"""Load project_registry.json if it exists locally."""
-if not REGISTRY_PATH.exists():
-return None
-
-```
-try:
-    with open(
-        REGISTRY_PATH,
-        "r",
-        encoding="utf-8",
-    ) as file:
-        return json.load(file)
-
-except (
-    OSError,
-    json.JSONDecodeError,
-) as error:
-    print(
-        f"Warning: Could not read local registry: {error}"
-    )
-    return None
-```
-
-def collect_tracked_files():
-"""Collect persistent project artifacts for the local registry."""
-files = []
-
-```
-for root in [
     TRAINING_DATA_DIR,
     TESTING_DATA_DIR,
     CURRENT_MODEL_DIR,
     VERSIONS_DIR,
 ]:
-    if not root.exists():
-        continue
-
-    for path in root.rglob("*"):
-        if path.is_file():
-            files.append(
-                relative_project_path(path)
-            )
-
-files.sort()
-return files
-```
-
-def write_project_registry(
-version_number,
-batch_number,
-metadata,
-):
-"""Write a local reproducibility registry."""
-registry = {
-"project": PROJECT_NAME,
-"registry_version": 1,
-"updated_at": utc_now(),
-"latest_version": f"v{version_number}",
-"latest_batch": batch_number,
-"latest_metadata": metadata,
-"tracked_files": collect_tracked_files(),
-}
-
-```
-temporary_path = REGISTRY_PATH.with_suffix(
-    ".tmp"
-)
-
-with open(
-    temporary_path,
-    "w",
-    encoding="utf-8",
-) as file:
-    json.dump(
-        registry,
-        file,
-        indent=4,
+    directory.mkdir(
+        parents=True,
+        exist_ok=True,
     )
 
-temporary_path.replace(
-    REGISTRY_PATH
-)
-
-print(
-    f"\nRegistry updated: {REGISTRY_PATH}"
-)
-
-return registry
-```
 
 # ============================================================
+# 3. UTILITY FUNCTIONS
+# ============================================================
 
+def utc_now():
+    """Return a timezone-aware UTC timestamp."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def print_section(title):
+    print("\n")
+    print("=" * 72)
+    print(title)
+    print("=" * 72)
+
+
+def relative_project_path(path):
+    """Return a repository-style path relative to the project root."""
+
+    relative_path = (
+        Path(path)
+        .resolve()
+        .relative_to(BASE_DIR.resolve())
+    )
+
+    return relative_path.as_posix()
+
+
+# ============================================================
+# 4. LOCAL PROJECT REGISTRY
+# ============================================================
+
+def load_registry():
+    """Load project_registry.json if it exists locally."""
+
+    if not REGISTRY_PATH.exists():
+        return None
+
+    try:
+        with open(
+            REGISTRY_PATH,
+            "r",
+            encoding="utf-8",
+        ) as file:
+            return json.load(file)
+
+    except (
+        OSError,
+        json.JSONDecodeError,
+    ) as error:
+
+        print(
+            f"Warning: Could not read local registry: {error}"
+        )
+
+        return None
+
+
+def collect_tracked_files():
+    """Collect persistent project artifacts."""
+
+    files = []
+
+    for root in [
+        TRAINING_DATA_DIR,
+        TESTING_DATA_DIR,
+        CURRENT_MODEL_DIR,
+        VERSIONS_DIR,
+    ]:
+
+        if not root.exists():
+            continue
+
+        for path in root.rglob("*"):
+
+            if path.is_file():
+                files.append(
+                    relative_project_path(path)
+                )
+
+    files.sort()
+
+    return files
+
+
+def write_project_registry(
+    version_number,
+    batch_number,
+    metadata,
+):
+    """Write a local reproducibility registry."""
+
+    registry = {
+        "project": PROJECT_NAME,
+        "registry_version": 1,
+        "updated_at": utc_now(),
+        "latest_version": f"v{version_number}",
+        "latest_batch": batch_number,
+        "latest_metadata": metadata,
+        "tracked_files": collect_tracked_files(),
+    }
+
+    temporary_path = REGISTRY_PATH.with_suffix(
+        ".tmp"
+    )
+
+    with open(
+        temporary_path,
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        json.dump(
+            registry,
+            file,
+            indent=4,
+        )
+
+    temporary_path.replace(
+        REGISTRY_PATH
+    )
+
+    print(
+        f"\nRegistry updated: {REGISTRY_PATH}"
+    )
+
+    return registry
+
+
+# ============================================================
 # 5. SYNTHETIC DATA GENERATION
-
 # ============================================================
 
 def generate_synthetic_data(
-n_samples,
-seed,
+    n_samples,
+    seed,
 ):
-"""
-Generate synthetic student data.
+    """
+    Generate synthetic student data.
 
-```
-The generator creates a nonlinear hidden relationship to make the
-prediction task meaningful. These equations are NOT used by WayPoint
-when a student is predicted in the application.
+    The hidden equations below are used only to generate
+    synthetic target values.
 
-Only these six features are exposed to the ML models:
-  - study_hours
-  - phone_hours
-  - days_before_exam
-  - assignment_percentage
-  - attendance_percentage
-  - previous_marks
-"""
+    The application does not use these equations for prediction.
+    """
 
-rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(seed)
 
-# --------------------------------------------------------
-# Study hours
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Study hours
+    # --------------------------------------------------------
 
-study_hours = rng.normal(
-    loc=3.2,
-    scale=1.4,
-    size=n_samples,
-)
+    study_hours = rng.normal(
+        loc=3.2,
+        scale=1.4,
+        size=n_samples,
+    )
 
-study_hours = np.clip(
-    study_hours,
-    0.25,
-    8.0,
-)
+    study_hours = np.clip(
+        study_hours,
+        0.25,
+        8.0,
+    )
 
-# --------------------------------------------------------
-# Phone usage
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Phone usage
+    # --------------------------------------------------------
 
-phone_hours = rng.normal(
-    loc=3.5,
-    scale=1.8,
-    size=n_samples,
-)
+    phone_hours = rng.normal(
+        loc=3.5,
+        scale=1.8,
+        size=n_samples,
+    )
 
-phone_hours = np.clip(
-    phone_hours,
-    0.0,
-    10.0,
-)
+    phone_hours = np.clip(
+        phone_hours,
+        0.0,
+        10.0,
+    )
 
-# --------------------------------------------------------
-# Days before exam
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Days before exam
+    # --------------------------------------------------------
 
-days_before_exam = rng.normal(
-    loc=12,
-    scale=7,
-    size=n_samples,
-)
+    days_before_exam = rng.normal(
+        loc=12,
+        scale=7,
+        size=n_samples,
+    )
 
-days_before_exam = np.clip(
-    days_before_exam,
-    1,
-    30,
-)
+    days_before_exam = np.clip(
+        days_before_exam,
+        1,
+        30,
+    )
 
-# --------------------------------------------------------
-# Assignment percentage
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Assignment percentage
+    # --------------------------------------------------------
 
-assignment_percentage = rng.normal(
-    loc=75,
-    scale=16,
-    size=n_samples,
-)
+    assignment_percentage = rng.normal(
+        loc=75,
+        scale=16,
+        size=n_samples,
+    )
 
-assignment_percentage = np.clip(
-    assignment_percentage,
-    20,
-    100,
-)
+    assignment_percentage = np.clip(
+        assignment_percentage,
+        20,
+        100,
+    )
 
-# --------------------------------------------------------
-# Attendance percentage
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Attendance percentage
+    # --------------------------------------------------------
 
-attendance_percentage = rng.normal(
-    loc=78,
-    scale=12,
-    size=n_samples,
-)
+    attendance_percentage = rng.normal(
+        loc=78,
+        scale=12,
+        size=n_samples,
+    )
 
-attendance_percentage = np.clip(
-    attendance_percentage,
-    40,
-    100,
-)
+    attendance_percentage = np.clip(
+        attendance_percentage,
+        40,
+        100,
+    )
 
-# --------------------------------------------------------
-# Previous marks
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Previous marks
+    # --------------------------------------------------------
 
-previous_marks = rng.normal(
-    loc=65,
-    scale=18,
-    size=n_samples,
-)
+    previous_marks = rng.normal(
+        loc=65,
+        scale=18,
+        size=n_samples,
+    )
 
-previous_marks = np.clip(
-    previous_marks,
-    20,
-    100,
-)
+    previous_marks = np.clip(
+        previous_marks,
+        20,
+        100,
+    )
 
-# ========================================================
-# Hidden nonlinear data-generating relationship
-# ========================================================
+    # ========================================================
+    # Hidden nonlinear relationship
+    # ========================================================
 
-study_effect = (
-    18
-    * (
-        1
-        - np.exp(
-            -study_hours / 3.5
+    study_effect = (
+        18
+        * (
+            1
+            - np.exp(
+                -study_hours / 3.5
+            )
         )
     )
-)
 
-phone_effect = (
-    1.2 * phone_hours
-    \+ 0.32 * (
-        phone_hours ** 2
-    )
-)
-
-exam_prep_effect = (
-    8
-    * (
-        1
-        - np.exp(
-            -days_before_exam / 10
+    phone_effect = (
+        1.2 * phone_hours
+        + 0.32 * (
+            phone_hours ** 2
         )
     )
-)
 
-assignment_effect = (
-    0.10
-    * assignment_percentage
-)
+    exam_prep_effect = (
+        8
+        * (
+            1
+            - np.exp(
+                -days_before_exam / 10
+            )
+        )
+    )
 
-attendance_effect = (
-    0.12
-    * attendance_percentage
-)
+    assignment_effect = (
+        0.10
+        * assignment_percentage
+    )
 
-previous_marks_effect = (
-    0.38
-    * previous_marks
-)
+    attendance_effect = (
+        0.12
+        * attendance_percentage
+    )
 
-study_phone_interaction = (
-    0.45
-    * study_hours
-    * np.maximum(
+    previous_marks_effect = (
+        0.38
+        * previous_marks
+    )
+
+    study_phone_interaction = (
+        0.45
+        * study_hours
+        * np.maximum(
+            0,
+            5 - phone_hours,
+        )
+    )
+
+    noise = rng.normal(
+        loc=0,
+        scale=3.5,
+        size=n_samples,
+    )
+
+    final_score = (
+        8
+        + study_effect
+        - phone_effect
+        + exam_prep_effect
+        + assignment_effect
+        + attendance_effect
+        + previous_marks_effect
+        + study_phone_interaction
+        + noise
+    )
+
+    final_score = np.clip(
+        final_score,
         0,
-        5 - phone_hours,
+        100,
     )
-)
 
-noise = rng.normal(
-    loc=0,
-    scale=3.5,
-    size=n_samples,
-)
+    # --------------------------------------------------------
+    # Risk categories
+    # --------------------------------------------------------
 
-final_score = (
-    8
-    + study_effect
-    - phone_effect
-    + exam_prep_effect
-    + assignment_effect
-    + attendance_effect
-    + previous_marks_effect
-    + study_phone_interaction
-    + noise
-)
+    risk_category = np.select(
+        [
+            final_score < 40,
+            final_score < 50,
+            final_score < 65,
+            final_score < 80,
+        ],
+        [
+            "Very High Risk",
+            "High Risk",
+            "Moderate Risk",
+            "Low Risk",
+        ],
+        default="Very Low Risk",
+    )
 
-final_score = np.clip(
-    final_score,
-    0,
-    100,
-)
+    return pd.DataFrame(
+        {
+            "study_hours": study_hours,
+            "phone_hours": phone_hours,
+            "days_before_exam": days_before_exam,
+            "assignment_percentage": assignment_percentage,
+            "attendance_percentage": attendance_percentage,
+            "previous_marks": previous_marks,
+            "final_score": final_score,
+            "risk_category": risk_category,
+        }
+    )
 
-# Risk labels are generated from the synthetic ground-truth score.
-# The classifier itself learns the relationship from the six features.
-
-risk_category = np.select(
-    [
-        final_score < 40,
-        final_score < 50,
-        final_score < 65,
-        final_score < 80,
-    ],
-    [
-        "Very High Risk",
-        "High Risk",
-        "Moderate Risk",
-        "Low Risk",
-    ],
-    default="Very Low Risk",
-)
-
-return pd.DataFrame(
-    {
-        "study_hours": study_hours,
-        "phone_hours": phone_hours,
-        "days_before_exam": days_before_exam,
-        "assignment_percentage": assignment_percentage,
-        "attendance_percentage": attendance_percentage,
-        "previous_marks": previous_marks,
-        "final_score": final_score,
-        "risk_category": risk_category,
-    }
-)
-```
 
 # ============================================================
-
 # 6. DATA BATCH MANAGEMENT
-
 # ============================================================
 
 def get_existing_training_batches():
-return sorted(
-TRAINING_DATA_DIR.glob(
-"train_batch_*.csv"
-)
-)
 
-def get_existing_testing_batches():
-return sorted(
-TESTING_DATA_DIR.glob(
-"test_batch_*.csv"
-)
-)
-
-def load_historical_data(file_list):
-"""
-Load all valid historical batches.
-
-```
-Invalid/incomplete CSV files are skipped rather than silently becoming
-training data with missing target columns.
-"""
-
-if not file_list:
-    return pd.DataFrame()
-
-required_columns = FEATURES + [
-    SCORE_TARGET,
-    RISK_TARGET,
-]
-
-frames = []
-
-for file_path in file_list:
-
-    try:
-        df = pd.read_csv(
-            file_path
+    return sorted(
+        TRAINING_DATA_DIR.glob(
+            "train_batch_*.csv"
         )
-
-        if all(
-            column in df.columns
-            for column in required_columns
-        ):
-            frames.append(df)
-
-        else:
-            print(
-                "Warning: Skipping incomplete "
-                f"data file: {file_path.name}"
-            )
-
-    except Exception as error:
-        print(
-            f"Warning: Could not load "
-            f"{file_path.name}: {error}"
-        )
-
-if not frames:
-    return pd.DataFrame()
-
-combined = pd.concat(
-    frames,
-    ignore_index=True,
-)
-
-# Ensure numeric model inputs are actually numeric.
-
-for column in FEATURES + [
-    SCORE_TARGET
-]:
-    combined[column] = pd.to_numeric(
-        combined[column],
-        errors="coerce",
     )
 
-combined = combined.dropna(
-    subset=FEATURES
-    + [
+
+def get_existing_testing_batches():
+
+    return sorted(
+        TESTING_DATA_DIR.glob(
+            "test_batch_*.csv"
+        )
+    )
+
+
+def load_historical_data(file_list):
+    """
+    Load all valid historical CSV batches.
+    """
+
+    if not file_list:
+        return pd.DataFrame()
+
+    required_columns = FEATURES + [
         SCORE_TARGET,
         RISK_TARGET,
     ]
-)
 
-return combined
-```
+    frames = []
+
+    for file_path in file_list:
+
+        try:
+
+            df = pd.read_csv(
+                file_path
+            )
+
+            if all(
+                column in df.columns
+                for column in required_columns
+            ):
+
+                frames.append(df)
+
+            else:
+
+                print(
+                    "Warning: Skipping incomplete "
+                    f"data file: {file_path.name}"
+                )
+
+        except Exception as error:
+
+            print(
+                f"Warning: Could not load "
+                f"{file_path.name}: {error}"
+            )
+
+    if not frames:
+        return pd.DataFrame()
+
+    combined = pd.concat(
+        frames,
+        ignore_index=True,
+    )
+
+    # Convert model input columns to numeric values.
+
+    for column in FEATURES + [
+        SCORE_TARGET
+    ]:
+
+        combined[column] = pd.to_numeric(
+            combined[column],
+            errors="coerce",
+        )
+
+    combined = combined.dropna(
+        subset=FEATURES
+        + [
+            SCORE_TARGET,
+            RISK_TARGET,
+        ]
+    )
+
+    return combined
+
 
 def get_next_batch_number():
-files = get_existing_training_batches()
 
-```
-if not files:
-    return 1
+    files = get_existing_training_batches()
 
-numbers = []
+    if not files:
+        return 1
 
-for file_path in files:
+    numbers = []
 
-    match = re.search(
-        r"train_batch_(\d+)$",
-        file_path.stem,
-    )
+    for file_path in files:
 
-    if match:
-        numbers.append(
-            int(match.group(1))
+        match = re.search(
+            r"train_batch_(\d+)$",
+            file_path.stem,
         )
 
-return max(
-    numbers,
-    default=0,
-) + 1
-```
+        if match:
+
+            numbers.append(
+                int(match.group(1))
+            )
+
+    return max(
+        numbers,
+        default=0,
+    ) + 1
+
 
 def get_existing_version_numbers():
-numbers = []
 
-```
-if not VERSIONS_DIR.exists():
-    return numbers
+    numbers = []
 
-for path in VERSIONS_DIR.iterdir():
+    if not VERSIONS_DIR.exists():
+        return numbers
 
-    if not path.is_dir():
-        continue
+    for path in VERSIONS_DIR.iterdir():
 
-    match = re.fullmatch(
-        r"v(\d+)",
-        path.name,
-    )
+        if not path.is_dir():
+            continue
 
-    if match:
-        numbers.append(
-            int(match.group(1))
+        match = re.fullmatch(
+            r"v(\d+)",
+            path.name,
         )
 
-return sorted(numbers)
-```
+        if match:
+
+            numbers.append(
+                int(match.group(1))
+            )
+
+    return sorted(numbers)
+
 
 def get_next_version_number():
-return max(
-get_existing_version_numbers(),
-default=0,
-) + 1
+
+    return max(
+        get_existing_version_numbers(),
+        default=0,
+    ) + 1
+
 
 # ============================================================
-
 # 7. MODEL FACTORIES
-
 # ============================================================
 
 def create_score_models():
-"""Create score-model candidates."""
-return {
-"DecisionTreeRegressor": DecisionTreeRegressor(
-max_depth=12,
-min_samples_leaf=5,
-random_state=RANDOM_SEED,
-),
+    """Create score-model candidates."""
 
-```
-    "RandomForestRegressor": RandomForestRegressor(
-        n_estimators=200,
-        max_depth=None,
-        min_samples_leaf=2,
-        random_state=RANDOM_SEED,
-        n_jobs=-1,
-    ),
+    return {
 
-    "HistGradientBoostingRegressor": (
-        HistGradientBoostingRegressor(
-            max_iter=250,
-            learning_rate=0.08,
-            max_leaf_nodes=31,
-            random_state=RANDOM_SEED,
-        )
-    ),
-}
-```
+        "DecisionTreeRegressor":
+            DecisionTreeRegressor(
+                max_depth=12,
+                min_samples_leaf=5,
+                random_state=RANDOM_SEED,
+            ),
+
+        "RandomForestRegressor":
+            RandomForestRegressor(
+                n_estimators=200,
+                max_depth=None,
+                min_samples_leaf=2,
+                random_state=RANDOM_SEED,
+                n_jobs=-1,
+            ),
+
+        "HistGradientBoostingRegressor":
+            HistGradientBoostingRegressor(
+                max_iter=250,
+                learning_rate=0.08,
+                max_leaf_nodes=31,
+                random_state=RANDOM_SEED,
+            ),
+    }
+
 
 def create_risk_models():
-"""Create risk-model candidates."""
-return {
-"DecisionTreeClassifier": DecisionTreeClassifier(
-max_depth=12,
-min_samples_leaf=5,
-class_weight="balanced",
-random_state=RANDOM_SEED,
-),
+    """Create risk-model candidates."""
 
-```
-    "RandomForestClassifier": RandomForestClassifier(
-        n_estimators=200,
-        max_depth=None,
-        min_samples_leaf=2,
-        class_weight="balanced",
-        random_state=RANDOM_SEED,
-        n_jobs=-1,
-    ),
+    return {
 
-    "HistGradientBoostingClassifier": (
-        HistGradientBoostingClassifier(
-            max_iter=250,
-            learning_rate=0.08,
-            max_leaf_nodes=31,
-            random_state=RANDOM_SEED,
-        )
-    ),
-}
-```
+        "DecisionTreeClassifier":
+            DecisionTreeClassifier(
+                max_depth=12,
+                min_samples_leaf=5,
+                class_weight="balanced",
+                random_state=RANDOM_SEED,
+            ),
+
+        "RandomForestClassifier":
+            RandomForestClassifier(
+                n_estimators=200,
+                max_depth=None,
+                min_samples_leaf=2,
+                class_weight="balanced",
+                random_state=RANDOM_SEED,
+                n_jobs=-1,
+            ),
+
+        "HistGradientBoostingClassifier":
+            HistGradientBoostingClassifier(
+                max_iter=250,
+                learning_rate=0.08,
+                max_leaf_nodes=31,
+                random_state=RANDOM_SEED,
+            ),
+    }
+
 
 # ============================================================
-
-# 8. MODEL EVALUATION HELPERS
-
+# 8. MODEL EVALUATION
 # ============================================================
 
 def evaluate_score_model(
-model,
-X_test,
-y_test,
-):
-predictions = model.predict(
-X_test
-)
-
-```
-r2 = r2_score(
+    model,
+    X_test,
     y_test,
-    predictions,
-)
+):
 
-rmse = np.sqrt(
-    mean_squared_error(
+    predictions = model.predict(
+        X_test
+    )
+
+    r2 = r2_score(
         y_test,
         predictions,
     )
-)
 
-mae = mean_absolute_error(
-    y_test,
-    predictions,
-)
+    rmse = np.sqrt(
+        mean_squared_error(
+            y_test,
+            predictions,
+        )
+    )
 
-return {
-    "r2": float(r2),
-    "rmse": float(rmse),
-    "mae": float(mae),
-}
-```
+    mae = mean_absolute_error(
+        y_test,
+        predictions,
+    )
+
+    return {
+        "r2": float(r2),
+        "rmse": float(rmse),
+        "mae": float(mae),
+    }
+
 
 def evaluate_risk_model(
-model,
-X_test,
-y_test,
+    model,
+    X_test,
+    y_test,
 ):
-predictions = model.predict(
-X_test
-)
 
-```
-accuracy = accuracy_score(
-    y_test,
-    predictions,
-)
+    predictions = model.predict(
+        X_test
+    )
 
-weighted_f1 = f1_score(
-    y_test,
-    predictions,
-    average="weighted",
-    zero_division=0,
-)
+    accuracy = accuracy_score(
+        y_test,
+        predictions,
+    )
 
-return {
-    "accuracy": float(accuracy),
-    "weighted_f1": float(
-        weighted_f1
-    ),
-}
-```
+    weighted_f1 = f1_score(
+        y_test,
+        predictions,
+        average="weighted",
+        zero_division=0,
+    )
+
+    return {
+        "accuracy": float(accuracy),
+        "weighted_f1": float(
+            weighted_f1
+        ),
+    }
+
 
 # ============================================================
-
-# 9. TRAIN ALL SCORE CANDIDATES
-
+# 9. TRAIN SCORE MODELS
 # ============================================================
 
 def train_score_models(
-X_train,
-y_train,
-X_test,
-y_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
 ):
-"""
-Train all score-model candidates on the complete
-accumulated dataset.
-"""
 
-```
-print_section(
-    "TRAINING SCORE MODELS"
-)
-
-candidates = create_score_models()
-
-trained_models = {}
-results = {}
-
-for model_name, model in candidates.items():
-
-    print(
-        f"\nTraining {model_name}..."
+    print_section(
+        "TRAINING SCORE MODELS"
     )
 
-    try:
+    candidates = create_score_models()
 
-        model.fit(
-            X_train,
-            y_train,
-        )
+    trained_models = {}
 
-        metrics = evaluate_score_model(
-            model,
-            X_test,
-            y_test,
-        )
+    results = {}
 
-        trained_models[
-            model_name
-        ] = model
-
-        results[
-            model_name
-        ] = metrics
+    for model_name, model in candidates.items():
 
         print(
-            f"R²   : {metrics['r2']:.4f}"
+            f"\nTraining {model_name}..."
         )
 
-        print(
-            f"RMSE : {metrics['rmse']:.4f}"
+        try:
+
+            model.fit(
+                X_train,
+                y_train,
+            )
+
+            metrics = evaluate_score_model(
+                model,
+                X_test,
+                y_test,
+            )
+
+            trained_models[
+                model_name
+            ] = model
+
+            results[
+                model_name
+            ] = metrics
+
+            print(
+                f"R²   : {metrics['r2']:.4f}"
+            )
+
+            print(
+                f"RMSE : {metrics['rmse']:.4f}"
+            )
+
+            print(
+                f"MAE  : {metrics['mae']:.4f}"
+            )
+
+        except Exception as error:
+
+            print(
+                f"Warning: {model_name} "
+                f"failed: {error}"
+            )
+
+    if not trained_models:
+
+        raise RuntimeError(
+            "No score model could be "
+            "trained successfully."
         )
 
-        print(
-            f"MAE  : {metrics['mae']:.4f}"
-        )
-
-    except Exception as error:
-
-        print(
-            f"Warning: {model_name} "
-            f"failed: {error}"
-        )
-
-if not trained_models:
-    raise RuntimeError(
-        "No score model could be "
-        "trained successfully."
+    return (
+        trained_models,
+        results,
     )
 
-return (
-    trained_models,
-    results,
-)
-```
 
 # ============================================================
-
-# 10. TRAIN ALL RISK CANDIDATES
-
+# 10. TRAIN RISK MODELS
 # ============================================================
 
 def train_risk_models(
-X_train,
-y_train,
-X_test,
-y_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
 ):
-"""
-Train all risk-model candidates on the complete
-accumulated dataset.
-"""
 
-```
-print_section(
-    "TRAINING RISK MODELS"
-)
-
-candidates = create_risk_models()
-
-trained_models = {}
-results = {}
-
-for model_name, model in candidates.items():
-
-    print(
-        f"\nTraining {model_name}..."
+    print_section(
+        "TRAINING RISK MODELS"
     )
 
-    try:
+    candidates = create_risk_models()
 
-        model.fit(
-            X_train,
-            y_train,
-        )
+    trained_models = {}
 
-        metrics = evaluate_risk_model(
-            model,
-            X_test,
-            y_test,
-        )
+    results = {}
 
-        trained_models[
-            model_name
-        ] = model
-
-        results[
-            model_name
-        ] = metrics
+    for model_name, model in candidates.items():
 
         print(
-            f"Accuracy    : "
-            f"{metrics['accuracy']:.4f}"
+            f"\nTraining {model_name}..."
         )
 
-        print(
-            f"Weighted F1 : "
-            f"{metrics['weighted_f1']:.4f}"
+        try:
+
+            model.fit(
+                X_train,
+                y_train,
+            )
+
+            metrics = evaluate_risk_model(
+                model,
+                X_test,
+                y_test,
+            )
+
+            trained_models[
+                model_name
+            ] = model
+
+            results[
+                model_name
+            ] = metrics
+
+            print(
+                f"Accuracy    : "
+                f"{metrics['accuracy']:.4f}"
+            )
+
+            print(
+                f"Weighted F1 : "
+                f"{metrics['weighted_f1']:.4f}"
+            )
+
+        except Exception as error:
+
+            print(
+                f"Warning: {model_name} "
+                f"failed: {error}"
+            )
+
+    if not trained_models:
+
+        raise RuntimeError(
+            "No risk model could be "
+            "trained successfully."
         )
 
-    except Exception as error:
-
-        print(
-            f"Warning: {model_name} "
-            f"failed: {error}"
-        )
-
-if not trained_models:
-    raise RuntimeError(
-        "No risk model could be "
-        "trained successfully."
+    return (
+        trained_models,
+        results,
     )
 
-return (
-    trained_models,
-    results,
-)
-```
 
 # ============================================================
-
 # 11. MODEL SELECTION
-
 # ============================================================
 
 def select_best_score_model(
-results,
+    results,
 ):
-"""
-Select by combined metric rank:
-- R² higher is better
-- RMSE lower is better
-- MAE lower is better
-"""
+    """
+    Select using combined metric rank.
 
-```
-dataframe = pd.DataFrame(
-    results
-).T.copy()
+    R²:
+        Higher is better.
 
-dataframe["r2_rank"] = (
-    dataframe["r2"].rank(
-        ascending=False,
-        method="min",
+    RMSE:
+        Lower is better.
+
+    MAE:
+        Lower is better.
+    """
+
+    dataframe = pd.DataFrame(
+        results
+    ).T.copy()
+
+    dataframe["r2_rank"] = (
+        dataframe["r2"].rank(
+            ascending=False,
+            method="min",
+        )
     )
-)
 
-dataframe["rmse_rank"] = (
-    dataframe["rmse"].rank(
-        ascending=True,
-        method="min",
+    dataframe["rmse_rank"] = (
+        dataframe["rmse"].rank(
+            ascending=True,
+            method="min",
+        )
     )
-)
 
-dataframe["mae_rank"] = (
-    dataframe["mae"].rank(
-        ascending=True,
-        method="min",
+    dataframe["mae_rank"] = (
+        dataframe["mae"].rank(
+            ascending=True,
+            method="min",
+        )
     )
-)
 
-dataframe["combined_rank"] = (
-    dataframe[
-        [
-            "r2_rank",
-            "rmse_rank",
-            "mae_rank",
-        ]
-    ].mean(axis=1)
-)
+    dataframe["combined_rank"] = (
+        dataframe[
+            [
+                "r2_rank",
+                "rmse_rank",
+                "mae_rank",
+            ]
+        ].mean(axis=1)
+    )
 
-best_model_name = (
-    dataframe[
-        "combined_rank"
-    ].idxmin()
-)
+    best_model_name = (
+        dataframe[
+            "combined_rank"
+        ].idxmin()
+    )
 
-return (
-    best_model_name,
-    dataframe,
-)
-```
+    return (
+        best_model_name,
+        dataframe,
+    )
+
 
 def select_best_risk_model(
-results,
+    results,
 ):
-"""
-Select by combined metric rank:
-- accuracy higher is better
-- weighted F1 higher is better
-"""
+    """
+    Select using combined metric rank.
 
-```
-dataframe = pd.DataFrame(
-    results
-).T.copy()
+    Accuracy:
+        Higher is better.
 
-dataframe["accuracy_rank"] = (
-    dataframe[
-        "accuracy"
-    ].rank(
-        ascending=False,
-        method="min",
+    Weighted F1:
+        Higher is better.
+    """
+
+    dataframe = pd.DataFrame(
+        results
+    ).T.copy()
+
+    dataframe["accuracy_rank"] = (
+        dataframe[
+            "accuracy"
+        ].rank(
+            ascending=False,
+            method="min",
+        )
     )
-)
 
-dataframe["weighted_f1_rank"] = (
-    dataframe[
-        "weighted_f1"
-    ].rank(
-        ascending=False,
-        method="min",
+    dataframe["weighted_f1_rank"] = (
+        dataframe[
+            "weighted_f1"
+        ].rank(
+            ascending=False,
+            method="min",
+        )
     )
-)
 
-dataframe["combined_rank"] = (
-    dataframe[
-        [
-            "accuracy_rank",
-            "weighted_f1_rank",
-        ]
-    ].mean(axis=1)
-)
+    dataframe["combined_rank"] = (
+        dataframe[
+            [
+                "accuracy_rank",
+                "weighted_f1_rank",
+            ]
+        ].mean(axis=1)
+    )
 
-best_model_name = (
-    dataframe[
-        "combined_rank"
-    ].idxmin()
-)
+    best_model_name = (
+        dataframe[
+            "combined_rank"
+        ].idxmin()
+    )
 
-return (
-    best_model_name,
-    dataframe,
-)
-```
+    return (
+        best_model_name,
+        dataframe,
+    )
+
 
 # ============================================================
-
-# 12. DATA / MODEL DIAGNOSTICS
-
+# 12. DATASET SUMMARY
 # ============================================================
 
 def print_dataset_summary(
-training_data,
-testing_data,
+    training_data,
+    testing_data,
 ):
-print_section(
-"DATASET SUMMARY"
-)
 
-```
-print(
-    f"Training samples : "
-    f"{len(training_data):,}"
-)
-
-print(
-    f"Testing samples  : "
-    f"{len(testing_data):,}"
-)
-```
-
-def print_model_predicted_score_ranges(
-score_model,
-risk_model,
-X_test,
-):
-predicted_scores = (
-score_model.predict(
-X_test
-)
-)
-
-```
-predicted_risks = (
-    risk_model.predict(
-        X_test
+    print_section(
+        "DATASET SUMMARY"
     )
-)
-
-prediction_dataframe = pd.DataFrame(
-    {
-        "predicted_score":
-            predicted_scores,
-
-        "predicted_risk":
-            predicted_risks,
-    }
-)
-
-print_section(
-    "MODEL-PREDICTED SCORE RANGES BY RISK CATEGORY"
-)
-
-for risk in RISK_ORDER:
-
-    subset = prediction_dataframe[
-        prediction_dataframe[
-            "predicted_risk"
-        ] == risk
-    ]
 
     print(
-        f"\n{risk}"
+        f"Training samples : "
+        f"{len(training_data):,}"
     )
 
-    if subset.empty:
+    print(
+        f"Testing samples  : "
+        f"{len(testing_data):,}"
+    )
+
+
+# ============================================================
+# 13. MODEL PREDICTION DIAGNOSTICS
+# ============================================================
+
+def print_model_predicted_score_ranges(
+    score_model,
+    risk_model,
+    X_test,
+):
+
+    predicted_scores = (
+        score_model.predict(
+            X_test
+        )
+    )
+
+    predicted_risks = (
+        risk_model.predict(
+            X_test
+        )
+    )
+
+    prediction_dataframe = pd.DataFrame(
+        {
+            "predicted_score":
+                predicted_scores,
+
+            "predicted_risk":
+                predicted_risks,
+        }
+    )
+
+    print_section(
+        "MODEL-PREDICTED SCORE RANGES BY RISK CATEGORY"
+    )
+
+    for risk in RISK_ORDER:
+
+        subset = prediction_dataframe[
+            prediction_dataframe[
+                "predicted_risk"
+            ] == risk
+        ]
 
         print(
-            "  Number of test students : 0"
+            f"\n{risk}"
+        )
+
+        if subset.empty:
+
+            print(
+                "  Number of test students : 0"
+            )
+
+            print(
+                "  Predicted score range   : "
+                "No students"
+            )
+
+            print(
+                "  Average predicted score : "
+                "No students"
+            )
+
+            continue
+
+        print(
+            "  Number of test students : "
+            f"{len(subset):,}"
         )
 
         print(
             "  Predicted score range   : "
-            "No students"
+            f"{subset['predicted_score'].min():.2f} - "
+            f"{subset['predicted_score'].max():.2f}"
         )
 
         print(
             "  Average predicted score : "
-            "No students"
+            f"{subset['predicted_score'].mean():.2f}"
         )
 
-        continue
-
-    print(
-        "  Number of test students : "
-        f"{len(subset):,}"
-    )
-
-    print(
-        "  Predicted score range   : "
-        f"{subset['predicted_score'].min():.2f} - "
-        f"{subset['predicted_score'].max():.2f}"
-    )
-
-    print(
-        "  Average predicted score : "
-        f"{subset['predicted_score'].mean():.2f}"
-    )
-```
 
 # ============================================================
-
-# 13. MODEL PERSISTENCE
-
+# 14. MODEL PERSISTENCE
 # ============================================================
 
 def save_model_version(
-version_number,
-score_model,
-risk_model,
-metadata,
-):
-version_name = (
-f"v{version_number}"
-)
-
-```
-version_directory = (
-    VERSIONS_DIR
-    / version_name
-)
-
-version_directory.mkdir(
-    parents=True,
-    exist_ok=True,
-)
-
-joblib.dump(
+    version_number,
     score_model,
-    version_directory
-    / "score_model.pkl",
-)
-
-joblib.dump(
     risk_model,
-    version_directory
-    / "risk_model.pkl",
-)
+    metadata,
+):
 
-with open(
-    version_directory
-    / "metadata.json",
-    "w",
-    encoding="utf-8",
-) as file:
-
-    json.dump(
-        metadata,
-        file,
-        indent=4,
+    version_name = (
+        f"v{version_number}"
     )
 
-print(
-    f"\nSaved immutable model "
-    f"version: {version_name}"
-)
+    version_directory = (
+        VERSIONS_DIR
+        / version_name
+    )
 
-return version_directory
-```
+    version_directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    joblib.dump(
+        score_model,
+        version_directory
+        / "score_model.pkl",
+    )
+
+    joblib.dump(
+        risk_model,
+        version_directory
+        / "risk_model.pkl",
+    )
+
+    with open(
+        version_directory
+        / "metadata.json",
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        json.dump(
+            metadata,
+            file,
+            indent=4,
+        )
+
+    print(
+        f"\nSaved model version: "
+        f"{version_name}"
+    )
+
+    return version_directory
+
 
 def update_current_model(
-version_directory,
+    version_directory,
 ):
-"""
-Copy the selected version into models/current/.
 
-```
-The student application always reads from models/current/.
-"""
+    """
+    Copy the selected model version into
+    models/current/.
 
-current_files = [
-    "score_model.pkl",
-    "risk_model.pkl",
-    "metadata.json",
-]
+    The student application reads the models
+    from models/current/.
+    """
 
-for filename in current_files:
+    current_files = [
+        "score_model.pkl",
+        "risk_model.pkl",
+        "metadata.json",
+    ]
 
-    source = (
-        version_directory
-        / filename
+    for filename in current_files:
+
+        source = (
+            version_directory
+            / filename
+        )
+
+        destination = (
+            CURRENT_MODEL_DIR
+            / filename
+        )
+
+        shutil.copy2(
+            source,
+            destination,
+        )
+
+    print(
+        "\nCurrent model updated:"
+        f"\n{CURRENT_MODEL_DIR}"
     )
 
-    destination = (
-        CURRENT_MODEL_DIR
-        / filename
-    )
-
-    shutil.copy2(
-        source,
-        destination,
-    )
-
-print(
-    "\nCurrent model updated:"
-    f"\n{CURRENT_MODEL_DIR}"
-)
-```
 
 # ============================================================
-
-# 14. MAIN TRAINING PIPELINE
-
+# 15. MAIN TRAINING PIPELINE
 # ============================================================
 
 def main():
 
-```
-print("\n")
+    print("\n")
 
-print("=" * 72)
+    print("=" * 72)
 
-print(
-    f"{PROJECT_NAME} — "
-    "ML TRAINING PIPELINE"
-)
-
-print("=" * 72)
-
-batch_number = (
-    get_next_batch_number()
-)
-
-version_number = (
-    get_next_version_number()
-)
-
-print(
-    f"\nNew batch number  : "
-    f"{batch_number}"
-)
-
-print(
-    f"New model version : "
-    f"v{version_number}"
-)
-
-# --------------------------------------------------------
-# 14.1 Generate a NEW training/testing batch.
-# --------------------------------------------------------
-
-print_section(
-    "GENERATING NEW SYNTHETIC DATA"
-)
-
-training_seed = (
-    RANDOM_SEED
-    + batch_number * 100
-)
-
-testing_seed = (
-    RANDOM_SEED
-    + batch_number * 100
-    \+ 1
-)
-
-print(
-    f"Generating "
-    f"{TRAINING_BATCH_SIZE:,} "
-    "training students..."
-)
-
-new_training_data = (
-    generate_synthetic_data(
-        TRAINING_BATCH_SIZE,
-        training_seed,
-    )
-)
-
-print(
-    f"Generating "
-    f"{TESTING_BATCH_SIZE:,} "
-    "testing students..."
-)
-
-new_testing_data = (
-    generate_synthetic_data(
-        TESTING_BATCH_SIZE,
-        testing_seed,
-    )
-)
-
-# --------------------------------------------------------
-# 14.2 Save the new batches.
-# --------------------------------------------------------
-
-training_path = (
-    TRAINING_DATA_DIR
-    / f"train_batch_"
-    f"{batch_number:03d}.csv"
-)
-
-testing_path = (
-    TESTING_DATA_DIR
-    / f"test_batch_"
-    f"{batch_number:03d}.csv"
-)
-
-new_training_data.to_csv(
-    training_path,
-    index=False,
-)
-
-new_testing_data.to_csv(
-    testing_path,
-    index=False,
-)
-
-print(
-    f"\nSaved training batch: "
-    f"{training_path}"
-)
-
-print(
-    f"Saved testing batch : "
-    f"{testing_path}"
-)
-
-# --------------------------------------------------------
-# 14.3 Load ALL accumulated historical data.
-# --------------------------------------------------------
-
-print_section(
-    "LOADING ALL HISTORICAL DATA"
-)
-
-training_files = (
-    get_existing_training_batches()
-)
-
-testing_files = (
-    get_existing_testing_batches()
-)
-
-all_training_data = (
-    load_historical_data(
-        training_files
-    )
-)
-
-all_testing_data = (
-    load_historical_data(
-        testing_files
-    )
-)
-
-if all_training_data.empty:
-    raise RuntimeError(
-        "No valid training data "
-        "was found."
+    print(
+        f"{PROJECT_NAME} — "
+        "ML TRAINING PIPELINE"
     )
 
-if all_testing_data.empty:
-    raise RuntimeError(
-        "No valid testing data "
-        "was found."
+    print("=" * 72)
+
+    # --------------------------------------------------------
+    # Determine new batch and version numbers.
+    # --------------------------------------------------------
+
+    batch_number = (
+        get_next_batch_number()
     )
 
-print_dataset_summary(
-    all_training_data,
-    all_testing_data,
-)
+    version_number = (
+        get_next_version_number()
+    )
 
-print(
-    f"\nTraining batches : "
-    f"{len(training_files)}"
-)
+    print(
+        f"\nNew batch number  : "
+        f"{batch_number}"
+    )
 
-print(
-    f"Testing batches  : "
-    f"{len(testing_files)}"
-)
+    print(
+        f"New model version : "
+        f"v{version_number}"
+    )
 
-# --------------------------------------------------------
-# 14.4 Prepare ML matrices.
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Generate new training/testing data.
+    # --------------------------------------------------------
 
-X_train = (
-    all_training_data[
-        FEATURES
-    ]
-)
+    print_section(
+        "GENERATING NEW SYNTHETIC DATA"
+    )
 
-y_train_score = (
-    all_training_data[
-        SCORE_TARGET
-    ]
-)
+    training_seed = (
+        RANDOM_SEED
+        + batch_number * 100
+    )
 
-y_train_risk = (
-    all_training_data[
-        RISK_TARGET
-    ]
-)
+    testing_seed = (
+        RANDOM_SEED
+        + batch_number * 100
+        + 1
+    )
 
-X_test = (
-    all_testing_data[
-        FEATURES
-    ]
-)
+    print(
+        f"Generating "
+        f"{TRAINING_BATCH_SIZE:,} "
+        "training students..."
+    )
 
-y_test_score = (
-    all_testing_data[
-        SCORE_TARGET
-    ]
-)
+    new_training_data = (
+        generate_synthetic_data(
+            TRAINING_BATCH_SIZE,
+            training_seed,
+        )
+    )
 
-y_test_risk = (
-    all_testing_data[
-        RISK_TARGET
-    ]
-)
+    print(
+        f"Generating "
+        f"{TESTING_BATCH_SIZE:,} "
+        "testing students..."
+    )
 
-# --------------------------------------------------------
-# 14.5 Train score candidates.
-# --------------------------------------------------------
+    new_testing_data = (
+        generate_synthetic_data(
+            TESTING_BATCH_SIZE,
+            testing_seed,
+        )
+    )
 
-(
-    trained_score_models,
-    score_results,
-) = train_score_models(
-    X_train,
-    y_train_score,
-    X_test,
-    y_test_score,
-)
+    # --------------------------------------------------------
+    # Save new data batches.
+    # --------------------------------------------------------
 
-# --------------------------------------------------------
-# 14.6 Train risk candidates.
-# --------------------------------------------------------
+    training_path = (
+        TRAINING_DATA_DIR
+        / f"train_batch_{batch_number:03d}.csv"
+    )
 
-(
-    trained_risk_models,
-    risk_results,
-) = train_risk_models(
-    X_train,
-    y_train_risk,
-    X_test,
-    y_test_risk,
-)
+    testing_path = (
+        TESTING_DATA_DIR
+        / f"test_batch_{batch_number:03d}.csv"
+    )
 
-# --------------------------------------------------------
-# 14.7 Select the best candidates.
-# --------------------------------------------------------
+    new_training_data.to_csv(
+        training_path,
+        index=False,
+    )
 
-(
-    best_score_model_name,
-    score_ranking,
-) = select_best_score_model(
-    score_results
-)
+    new_testing_data.to_csv(
+        testing_path,
+        index=False,
+    )
 
-(
-    best_risk_model_name,
-    risk_ranking,
-) = select_best_risk_model(
-    risk_results
-)
+    print(
+        f"\nSaved training batch: "
+        f"{training_path}"
+    )
 
-best_score_model = (
-    trained_score_models[
-        best_score_model_name
-    ]
-)
+    print(
+        f"Saved testing batch : "
+        f"{testing_path}"
+    )
 
-best_risk_model = (
-    trained_risk_models[
-        best_risk_model_name
-    ]
-)
+    # --------------------------------------------------------
+    # Load all historical data.
+    # --------------------------------------------------------
 
-print_section(
-    "BEST MODELS SELECTED"
-)
+    print_section(
+        "LOADING ALL HISTORICAL DATA"
+    )
 
-print(
-    f"Best score model : "
-    f"{best_score_model_name}"
-)
+    training_files = (
+        get_existing_training_batches()
+    )
 
-print(
-    f"Best risk model  : "
-    f"{best_risk_model_name}"
-)
+    testing_files = (
+        get_existing_testing_batches()
+    )
 
-# --------------------------------------------------------
-# 14.8 Print candidate comparisons.
-# --------------------------------------------------------
+    all_training_data = (
+        load_historical_data(
+            training_files
+        )
+    )
 
-print_section(
-    "SCORE MODEL COMPARISON"
-)
+    all_testing_data = (
+        load_historical_data(
+            testing_files
+        )
+    )
 
-print(
-    score_ranking[
-        [
-            "r2",
-            "rmse",
-            "mae",
-            "combined_rank",
+    if all_training_data.empty:
+
+        raise RuntimeError(
+            "No valid training data "
+            "was found."
+        )
+
+    if all_testing_data.empty:
+
+        raise RuntimeError(
+            "No valid testing data "
+            "was found."
+        )
+
+    print_dataset_summary(
+        all_training_data,
+        all_testing_data,
+    )
+
+    print(
+        f"\nTraining batches : "
+        f"{len(training_files)}"
+    )
+
+    print(
+        f"Testing batches  : "
+        f"{len(testing_files)}"
+    )
+
+    # --------------------------------------------------------
+    # Prepare training and testing matrices.
+    # --------------------------------------------------------
+
+    X_train = (
+        all_training_data[
+            FEATURES
         ]
-    ].to_string()
-)
+    )
 
-print_section(
-    "RISK MODEL COMPARISON"
-)
-
-print(
-    risk_ranking[
-        [
-            "accuracy",
-            "weighted_f1",
-            "combined_rank",
+    y_train_score = (
+        all_training_data[
+            SCORE_TARGET
         ]
-    ].to_string()
-)
+    )
 
-# --------------------------------------------------------
-# 14.9 Diagnostic prediction ranges.
-# --------------------------------------------------------
+    y_train_risk = (
+        all_training_data[
+            RISK_TARGET
+        ]
+    )
 
-print_model_predicted_score_ranges(
-    best_score_model,
-    best_risk_model,
-    X_test,
-)
+    X_test = (
+        all_testing_data[
+            FEATURES
+        ]
+    )
 
-# --------------------------------------------------------
-# 14.10 Build complete metadata.
-# --------------------------------------------------------
+    y_test_score = (
+        all_testing_data[
+            SCORE_TARGET
+        ]
+    )
 
-metadata = {
-    "project": PROJECT_NAME,
+    y_test_risk = (
+        all_testing_data[
+            RISK_TARGET
+        ]
+    )
 
-    "version":
-        f"v{version_number}",
+    # --------------------------------------------------------
+    # Train score models.
+    # --------------------------------------------------------
 
-    "created_at":
-        utc_now(),
-
-    "batch_number":
-        batch_number,
-
-    "new_training_samples":
-        TRAINING_BATCH_SIZE,
-
-    "new_testing_samples":
-        TESTING_BATCH_SIZE,
-
-    "total_training_samples":
-        int(
-            len(all_training_data)
-        ),
-
-    "total_testing_samples":
-        int(
-            len(all_testing_data)
-        ),
-
-    "training_batches":
-        len(training_files),
-
-    "testing_batches":
-        len(testing_files),
-
-    "features":
-        FEATURES,
-
-    "score_target":
-        SCORE_TARGET,
-
-    "risk_target":
-        RISK_TARGET,
-
-    "risk_order":
-        RISK_ORDER,
-
-    "candidate_score_models":
-        list(
-            trained_score_models.keys()
-        ),
-
-    "candidate_risk_models":
-        list(
-            trained_risk_models.keys()
-        ),
-
-    "best_score_model":
-        best_score_model_name,
-
-    "best_risk_model":
-        best_risk_model_name,
-
-    "score_metrics":
+    (
+        trained_score_models,
         score_results,
+    ) = train_score_models(
+        X_train,
+        y_train_score,
+        X_test,
+        y_test_score,
+    )
 
-    "risk_metrics":
+    # --------------------------------------------------------
+    # Train risk models.
+    # --------------------------------------------------------
+
+    (
+        trained_risk_models,
         risk_results,
+    ) = train_risk_models(
+        X_train,
+        y_train_risk,
+        X_test,
+        y_test_risk,
+    )
 
-    "historical_data_reused":
-        True,
-}
+    # --------------------------------------------------------
+    # Select best score model.
+    # --------------------------------------------------------
 
-# --------------------------------------------------------
-# 14.11 Save immutable version.
-# --------------------------------------------------------
+    (
+        best_score_model_name,
+        score_ranking,
+    ) = select_best_score_model(
+        score_results
+    )
 
-version_directory = (
-    save_model_version(
-        version_number,
+    # --------------------------------------------------------
+    # Select best risk model.
+    # --------------------------------------------------------
+
+    (
+        best_risk_model_name,
+        risk_ranking,
+    ) = select_best_risk_model(
+        risk_results
+    )
+
+    best_score_model = (
+        trained_score_models[
+            best_score_model_name
+        ]
+    )
+
+    best_risk_model = (
+        trained_risk_models[
+            best_risk_model_name
+        ]
+    )
+
+    print_section(
+        "BEST MODELS SELECTED"
+    )
+
+    print(
+        f"Best score model : "
+        f"{best_score_model_name}"
+    )
+
+    print(
+        f"Best risk model  : "
+        f"{best_risk_model_name}"
+    )
+
+    # --------------------------------------------------------
+    # Display score model comparison.
+    # --------------------------------------------------------
+
+    print_section(
+        "SCORE MODEL COMPARISON"
+    )
+
+    print(
+        score_ranking[
+            [
+                "r2",
+                "rmse",
+                "mae",
+                "combined_rank",
+            ]
+        ].to_string()
+    )
+
+    # --------------------------------------------------------
+    # Display risk model comparison.
+    # --------------------------------------------------------
+
+    print_section(
+        "RISK MODEL COMPARISON"
+    )
+
+    print(
+        risk_ranking[
+            [
+                "accuracy",
+                "weighted_f1",
+                "combined_rank",
+            ]
+        ].to_string()
+    )
+
+    # --------------------------------------------------------
+    # Display model prediction ranges.
+    # --------------------------------------------------------
+
+    print_model_predicted_score_ranges(
         best_score_model,
         best_risk_model,
-        metadata,
+        X_test,
     )
-)
 
-# --------------------------------------------------------
-# 14.12 Update the application's current models.
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Build metadata.
+    # --------------------------------------------------------
 
-update_current_model(
-    version_directory
-)
+    metadata = {
 
-# --------------------------------------------------------
-# 14.13 Update registry AFTER all artifacts exist.
-# --------------------------------------------------------
+        "project":
+            PROJECT_NAME,
 
-registry = (
-    write_project_registry(
-        version_number,
-        batch_number,
-        metadata,
+        "version":
+            f"v{version_number}",
+
+        "created_at":
+            utc_now(),
+
+        "batch_number":
+            batch_number,
+
+        "new_training_samples":
+            TRAINING_BATCH_SIZE,
+
+        "new_testing_samples":
+            TESTING_BATCH_SIZE,
+
+        "total_training_samples":
+            int(
+                len(all_training_data)
+            ),
+
+        "total_testing_samples":
+            int(
+                len(all_testing_data)
+            ),
+
+        "training_batches":
+            len(training_files),
+
+        "testing_batches":
+            len(testing_files),
+
+        "features":
+            FEATURES,
+
+        "score_target":
+            SCORE_TARGET,
+
+        "risk_target":
+            RISK_TARGET,
+
+        "risk_order":
+            RISK_ORDER,
+
+        "candidate_score_models":
+            list(
+                trained_score_models.keys()
+            ),
+
+        "candidate_risk_models":
+            list(
+                trained_risk_models.keys()
+            ),
+
+        "best_score_model":
+            best_score_model_name,
+
+        "best_risk_model":
+            best_risk_model_name,
+
+        "score_metrics":
+            score_results,
+
+        "risk_metrics":
+            risk_results,
+
+        "historical_data_reused":
+            True,
+    }
+
+    # --------------------------------------------------------
+    # Save model version.
+    # --------------------------------------------------------
+
+    version_directory = (
+        save_model_version(
+            version_number,
+            best_score_model,
+            best_risk_model,
+            metadata,
+        )
     )
-)
 
-# --------------------------------------------------------
-# 14.14 Final status.
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Update current models.
+    # --------------------------------------------------------
 
-print_section(
-    "WAYPOINT TRAINING RUN COMPLETE"
-)
+    update_current_model(
+        version_directory
+    )
 
-print(
-    f"Model version created : "
-    f"v{version_number}"
-)
+    # --------------------------------------------------------
+    # Update project registry.
+    # --------------------------------------------------------
 
-print(
-    f"Best score model     : "
-    f"{best_score_model_name}"
-)
+    registry = (
+        write_project_registry(
+            version_number,
+            batch_number,
+            metadata,
+        )
+    )
 
-print(
-    f"Best risk model      : "
-    f"{best_risk_model_name}"
-)
+    # --------------------------------------------------------
+    # Final status.
+    # --------------------------------------------------------
 
-print(
-    f"Total training data  : "
-    f"{len(all_training_data):,}"
-)
+    print_section(
+        "WAYPOINT TRAINING RUN COMPLETE"
+    )
 
-print(
-    f"Total testing data   : "
-    f"{len(all_testing_data):,}"
-)
+    print(
+        f"Model version created : "
+        f"v{version_number}"
+    )
 
-print(
-    f"Version directory    : "
-    f"{version_directory}"
-)
+    print(
+        f"Best score model     : "
+        f"{best_score_model_name}"
+    )
 
-print(
-    f"Current model dir    : "
-    f"{CURRENT_MODEL_DIR}"
-)
+    print(
+        f"Best risk model      : "
+        f"{best_risk_model_name}"
+    )
 
-print(
-    f"Registry             : "
-    f"{REGISTRY_PATH}"
-)
+    print(
+        f"Total training data  : "
+        f"{len(all_training_data):,}"
+    )
 
-return registry
-```
+    print(
+        f"Total testing data   : "
+        f"{len(all_testing_data):,}"
+    )
+
+    print(
+        f"Version directory    : "
+        f"{version_directory}"
+    )
+
+    print(
+        f"Current model dir    : "
+        f"{CURRENT_MODEL_DIR}"
+    )
+
+    print(
+        f"Registry             : "
+        f"{REGISTRY_PATH}"
+    )
+
+    return registry
+
 
 # ============================================================
-
-# 15. PROGRAM ENTRY POINT
-
+# 16. PROGRAM ENTRY POINT
 # ============================================================
 
-if **name** == "**main**":
-main()
+if __name__ == "__main__":
+    main()
