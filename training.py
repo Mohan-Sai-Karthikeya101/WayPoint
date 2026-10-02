@@ -190,9 +190,11 @@ print("=" * 72)
 
 def relative_project_path(path):
 """Return a repository-style path relative to the project root."""
-return str(Path(path).resolve().relative_to(BASE_DIR.resolve())).replace(
-"\", "/"
-)
+return str(
+Path(path)
+.resolve()
+.relative_to(BASE_DIR.resolve())
+).replace("\", "/")
 
 # ============================================================
 
@@ -207,10 +209,20 @@ return None
 
 ```
 try:
-    with open(REGISTRY_PATH, "r", encoding="utf-8") as file:
+    with open(
+        REGISTRY_PATH,
+        "r",
+        encoding="utf-8",
+    ) as file:
         return json.load(file)
-except (OSError, json.JSONDecodeError) as error:
-    print(f"Warning: Could not read local registry: {error}")
+
+except (
+    OSError,
+    json.JSONDecodeError,
+) as error:
+    print(
+        f"Warning: Could not read local registry: {error}"
+    )
     return None
 ```
 
@@ -230,13 +242,19 @@ for root in [
 
     for path in root.rglob("*"):
         if path.is_file():
-            files.append(relative_project_path(path))
+            files.append(
+                relative_project_path(path)
+            )
 
 files.sort()
 return files
 ```
 
-def write_project_registry(version_number, batch_number, metadata):
+def write_project_registry(
+version_number,
+batch_number,
+metadata,
+):
 """Write a local reproducibility registry."""
 registry = {
 "project": PROJECT_NAME,
@@ -249,13 +267,29 @@ registry = {
 }
 
 ```
-temporary_path = REGISTRY_PATH.with_suffix(".tmp")
+temporary_path = REGISTRY_PATH.with_suffix(
+    ".tmp"
+)
 
-with open(temporary_path, "w", encoding="utf-8") as file:
-    json.dump(registry, file, indent=4)
+with open(
+    temporary_path,
+    "w",
+    encoding="utf-8",
+) as file:
+    json.dump(
+        registry,
+        file,
+        indent=4,
+    )
 
-temporary_path.replace(REGISTRY_PATH)
-print(f"\nRegistry updated: {REGISTRY_PATH}")
+temporary_path.replace(
+    REGISTRY_PATH
+)
+
+print(
+    f"\nRegistry updated: {REGISTRY_PATH}"
+)
+
 return registry
 ```
 
@@ -265,7 +299,10 @@ return registry
 
 # ============================================================
 
-def generate_synthetic_data(n_samples, seed):
+def generate_synthetic_data(
+n_samples,
+seed,
+):
 """
 Generate synthetic student data.
 
@@ -282,16 +319,19 @@ Only these six features are exposed to the ML models:
   - attendance_percentage
   - previous_marks
 """
+
 rng = np.random.default_rng(seed)
 
 # --------------------------------------------------------
 # Study hours
 # --------------------------------------------------------
+
 study_hours = rng.normal(
     loc=3.2,
     scale=1.4,
     size=n_samples,
 )
+
 study_hours = np.clip(
     study_hours,
     0.25,
@@ -301,11 +341,13 @@ study_hours = np.clip(
 # --------------------------------------------------------
 # Phone usage
 # --------------------------------------------------------
+
 phone_hours = rng.normal(
     loc=3.5,
     scale=1.8,
     size=n_samples,
 )
+
 phone_hours = np.clip(
     phone_hours,
     0.0,
@@ -315,11 +357,13 @@ phone_hours = np.clip(
 # --------------------------------------------------------
 # Days before exam
 # --------------------------------------------------------
+
 days_before_exam = rng.normal(
     loc=12,
     scale=7,
     size=n_samples,
 )
+
 days_before_exam = np.clip(
     days_before_exam,
     1,
@@ -329,11 +373,13 @@ days_before_exam = np.clip(
 # --------------------------------------------------------
 # Assignment percentage
 # --------------------------------------------------------
+
 assignment_percentage = rng.normal(
     loc=75,
     scale=16,
     size=n_samples,
 )
+
 assignment_percentage = np.clip(
     assignment_percentage,
     20,
@@ -343,11 +389,13 @@ assignment_percentage = np.clip(
 # --------------------------------------------------------
 # Attendance percentage
 # --------------------------------------------------------
+
 attendance_percentage = rng.normal(
     loc=78,
     scale=12,
     size=n_samples,
 )
+
 attendance_percentage = np.clip(
     attendance_percentage,
     40,
@@ -357,11 +405,13 @@ attendance_percentage = np.clip(
 # --------------------------------------------------------
 # Previous marks
 # --------------------------------------------------------
+
 previous_marks = rng.normal(
     loc=65,
     scale=18,
     size=n_samples,
 )
+
 previous_marks = np.clip(
     previous_marks,
     20,
@@ -376,20 +426,26 @@ study_effect = (
     18
     * (
         1
-        - np.exp(-study_hours / 3.5)
+        - np.exp(
+            -study_hours / 3.5
+        )
     )
 )
 
 phone_effect = (
     1.2 * phone_hours
-    \+ 0.32 * (phone_hours ** 2)
+    \+ 0.32 * (
+        phone_hours ** 2
+    )
 )
 
 exam_prep_effect = (
     8
     * (
         1
-        - np.exp(-days_before_exam / 10)
+        - np.exp(
+            -days_before_exam / 10
+        )
     )
 )
 
@@ -443,6 +499,7 @@ final_score = np.clip(
 
 # Risk labels are generated from the synthetic ground-truth score.
 # The classifier itself learns the relationship from the six features.
+
 risk_category = np.select(
     [
         final_score < 40,
@@ -481,12 +538,16 @@ return pd.DataFrame(
 
 def get_existing_training_batches():
 return sorted(
-TRAINING_DATA_DIR.glob("train_batch_*.csv")
+TRAINING_DATA_DIR.glob(
+"train_batch_*.csv"
+)
 )
 
 def get_existing_testing_batches():
 return sorted(
-TESTING_DATA_DIR.glob("test_batch_*.csv")
+TESTING_DATA_DIR.glob(
+"test_batch_*.csv"
+)
 )
 
 def load_historical_data(file_list):
@@ -497,6 +558,7 @@ Load all valid historical batches.
 Invalid/incomplete CSV files are skipped rather than silently becoming
 training data with missing target columns.
 """
+
 if not file_list:
     return pd.DataFrame()
 
@@ -508,18 +570,22 @@ required_columns = FEATURES + [
 frames = []
 
 for file_path in file_list:
+
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(
+            file_path
+        )
 
         if all(
             column in df.columns
             for column in required_columns
         ):
             frames.append(df)
+
         else:
             print(
-                f"Warning: Skipping incomplete data file: "
-                f"{file_path.name}"
+                "Warning: Skipping incomplete "
+                f"data file: {file_path.name}"
             )
 
     except Exception as error:
@@ -537,14 +603,21 @@ combined = pd.concat(
 )
 
 # Ensure numeric model inputs are actually numeric.
-for column in FEATURES + [SCORE_TARGET]:
+
+for column in FEATURES + [
+    SCORE_TARGET
+]:
     combined[column] = pd.to_numeric(
         combined[column],
         errors="coerce",
     )
 
 combined = combined.dropna(
-    subset=FEATURES + [SCORE_TARGET, RISK_TARGET]
+    subset=FEATURES
+    + [
+        SCORE_TARGET,
+        RISK_TARGET,
+    ]
 )
 
 return combined
@@ -560,6 +633,7 @@ if not files:
 numbers = []
 
 for file_path in files:
+
     match = re.search(
         r"train_batch_(\d+)$",
         file_path.stem,
@@ -570,7 +644,10 @@ for file_path in files:
             int(match.group(1))
         )
 
-return max(numbers, default=0) + 1
+return max(
+    numbers,
+    default=0,
+) + 1
 ```
 
 def get_existing_version_numbers():
@@ -581,6 +658,7 @@ if not VERSIONS_DIR.exists():
     return numbers
 
 for path in VERSIONS_DIR.iterdir():
+
     if not path.is_dir():
         continue
 
@@ -610,30 +688,36 @@ default=0,
 # ============================================================
 
 def create_score_models():
-"""Create fresh score-model candidates."""
+"""Create score-model candidates."""
 return {
 "DecisionTreeRegressor": DecisionTreeRegressor(
 max_depth=12,
 min_samples_leaf=5,
 random_state=RANDOM_SEED,
 ),
-"RandomForestRegressor": RandomForestRegressor(
-n_estimators=200,
-max_depth=None,
-min_samples_leaf=2,
-random_state=RANDOM_SEED,
-n_jobs=-1,
-),
-"HistGradientBoostingRegressor": HistGradientBoostingRegressor(
-max_iter=250,
-learning_rate=0.08,
-max_leaf_nodes=31,
-random_state=RANDOM_SEED,
-),
+
+```
+    "RandomForestRegressor": RandomForestRegressor(
+        n_estimators=200,
+        max_depth=None,
+        min_samples_leaf=2,
+        random_state=RANDOM_SEED,
+        n_jobs=-1,
+    ),
+
+    "HistGradientBoostingRegressor": (
+        HistGradientBoostingRegressor(
+            max_iter=250,
+            learning_rate=0.08,
+            max_leaf_nodes=31,
+            random_state=RANDOM_SEED,
+        )
+    ),
 }
+```
 
 def create_risk_models():
-"""Create fresh risk-model candidates."""
+"""Create risk-model candidates."""
 return {
 "DecisionTreeClassifier": DecisionTreeClassifier(
 max_depth=12,
@@ -641,21 +725,27 @@ min_samples_leaf=5,
 class_weight="balanced",
 random_state=RANDOM_SEED,
 ),
-"RandomForestClassifier": RandomForestClassifier(
-n_estimators=200,
-max_depth=None,
-min_samples_leaf=2,
-class_weight="balanced",
-random_state=RANDOM_SEED,
-n_jobs=-1,
-),
-"HistGradientBoostingClassifier": HistGradientBoostingClassifier(
-max_iter=250,
-learning_rate=0.08,
-max_leaf_nodes=31,
-random_state=RANDOM_SEED,
-),
+
+```
+    "RandomForestClassifier": RandomForestClassifier(
+        n_estimators=200,
+        max_depth=None,
+        min_samples_leaf=2,
+        class_weight="balanced",
+        random_state=RANDOM_SEED,
+        n_jobs=-1,
+    ),
+
+    "HistGradientBoostingClassifier": (
+        HistGradientBoostingClassifier(
+            max_iter=250,
+            learning_rate=0.08,
+            max_leaf_nodes=31,
+            random_state=RANDOM_SEED,
+        )
+    ),
 }
+```
 
 # ============================================================
 
@@ -668,7 +758,9 @@ model,
 X_test,
 y_test,
 ):
-predictions = model.predict(X_test)
+predictions = model.predict(
+X_test
+)
 
 ```
 r2 = r2_score(
@@ -700,7 +792,9 @@ model,
 X_test,
 y_test,
 ):
-predictions = model.predict(X_test)
+predictions = model.predict(
+X_test
+)
 
 ```
 accuracy = accuracy_score(
@@ -717,7 +811,9 @@ weighted_f1 = f1_score(
 
 return {
     "accuracy": float(accuracy),
-    "weighted_f1": float(weighted_f1),
+    "weighted_f1": float(
+        weighted_f1
+    ),
 }
 ```
 
@@ -734,20 +830,28 @@ X_test,
 y_test,
 ):
 """
-Train all score-model candidates on the complete accumulated data.
+Train all score-model candidates on the complete
+accumulated dataset.
 """
-print_section("TRAINING SCORE MODELS")
 
 ```
+print_section(
+    "TRAINING SCORE MODELS"
+)
+
 candidates = create_score_models()
 
 trained_models = {}
 results = {}
 
 for model_name, model in candidates.items():
-    print(f"\nTraining {model_name}...")
+
+    print(
+        f"\nTraining {model_name}..."
+    )
 
     try:
+
         model.fit(
             X_train,
             y_train,
@@ -759,30 +863,43 @@ for model_name, model in candidates.items():
             y_test,
         )
 
-        trained_models[model_name] = model
-        results[model_name] = metrics
+        trained_models[
+            model_name
+        ] = model
+
+        results[
+            model_name
+        ] = metrics
 
         print(
             f"R²   : {metrics['r2']:.4f}"
         )
+
         print(
             f"RMSE : {metrics['rmse']:.4f}"
         )
+
         print(
             f"MAE  : {metrics['mae']:.4f}"
         )
 
     except Exception as error:
+
         print(
-            f"Warning: {model_name} failed: {error}"
+            f"Warning: {model_name} "
+            f"failed: {error}"
         )
 
 if not trained_models:
     raise RuntimeError(
-        "No score model could be trained successfully."
+        "No score model could be "
+        "trained successfully."
     )
 
-return trained_models, results
+return (
+    trained_models,
+    results,
+)
 ```
 
 # ============================================================
@@ -798,20 +915,28 @@ X_test,
 y_test,
 ):
 """
-Train all risk-model candidates on the complete accumulated data.
+Train all risk-model candidates on the complete
+accumulated dataset.
 """
-print_section("TRAINING RISK MODELS")
 
 ```
+print_section(
+    "TRAINING RISK MODELS"
+)
+
 candidates = create_risk_models()
 
 trained_models = {}
 results = {}
 
 for model_name, model in candidates.items():
-    print(f"\nTraining {model_name}...")
+
+    print(
+        f"\nTraining {model_name}..."
+    )
 
     try:
+
         model.fit(
             X_train,
             y_train,
@@ -823,27 +948,41 @@ for model_name, model in candidates.items():
             y_test,
         )
 
-        trained_models[model_name] = model
-        results[model_name] = metrics
+        trained_models[
+            model_name
+        ] = model
+
+        results[
+            model_name
+        ] = metrics
 
         print(
-            f"Accuracy    : {metrics['accuracy']:.4f}"
+            f"Accuracy    : "
+            f"{metrics['accuracy']:.4f}"
         )
+
         print(
-            f"Weighted F1 : {metrics['weighted_f1']:.4f}"
+            f"Weighted F1 : "
+            f"{metrics['weighted_f1']:.4f}"
         )
 
     except Exception as error:
+
         print(
-            f"Warning: {model_name} failed: {error}"
+            f"Warning: {model_name} "
+            f"failed: {error}"
         )
 
 if not trained_models:
     raise RuntimeError(
-        "No risk model could be trained successfully."
+        "No risk model could be "
+        "trained successfully."
     )
 
-return trained_models, results
+return (
+    trained_models,
+    results,
+)
 ```
 
 # ============================================================
@@ -852,83 +991,115 @@ return trained_models, results
 
 # ============================================================
 
-def select_best_score_model(results):
+def select_best_score_model(
+results,
+):
 """
 Select by combined metric rank:
 - R² higher is better
 - RMSE lower is better
 - MAE lower is better
 """
-dataframe = pd.DataFrame(results).T.copy()
 
 ```
-dataframe["r2_rank"] = dataframe["r2"].rank(
-    ascending=False,
-    method="min",
+dataframe = pd.DataFrame(
+    results
+).T.copy()
+
+dataframe["r2_rank"] = (
+    dataframe["r2"].rank(
+        ascending=False,
+        method="min",
+    )
 )
 
-dataframe["rmse_rank"] = dataframe["rmse"].rank(
-    ascending=True,
-    method="min",
+dataframe["rmse_rank"] = (
+    dataframe["rmse"].rank(
+        ascending=True,
+        method="min",
+    )
 )
 
-dataframe["mae_rank"] = dataframe["mae"].rank(
-    ascending=True,
-    method="min",
+dataframe["mae_rank"] = (
+    dataframe["mae"].rank(
+        ascending=True,
+        method="min",
+    )
 )
 
-dataframe["combined_rank"] = dataframe[
-    [
-        "r2_rank",
-        "rmse_rank",
-        "mae_rank",
-    ]
-].mean(axis=1)
+dataframe["combined_rank"] = (
+    dataframe[
+        [
+            "r2_rank",
+            "rmse_rank",
+            "mae_rank",
+        ]
+    ].mean(axis=1)
+)
 
 best_model_name = (
-    dataframe["combined_rank"]
-    .idxmin()
+    dataframe[
+        "combined_rank"
+    ].idxmin()
 )
 
-return best_model_name, dataframe
+return (
+    best_model_name,
+    dataframe,
+)
 ```
 
-def select_best_risk_model(results):
+def select_best_risk_model(
+results,
+):
 """
 Select by combined metric rank:
 - accuracy higher is better
 - weighted F1 higher is better
 """
-dataframe = pd.DataFrame(results).T.copy()
 
 ```
-dataframe["accuracy_rank"] = dataframe[
-    "accuracy"
-].rank(
-    ascending=False,
-    method="min",
+dataframe = pd.DataFrame(
+    results
+).T.copy()
+
+dataframe["accuracy_rank"] = (
+    dataframe[
+        "accuracy"
+    ].rank(
+        ascending=False,
+        method="min",
+    )
 )
 
-dataframe["weighted_f1_rank"] = dataframe[
-    "weighted_f1"
-].rank(
-    ascending=False,
-    method="min",
+dataframe["weighted_f1_rank"] = (
+    dataframe[
+        "weighted_f1"
+    ].rank(
+        ascending=False,
+        method="min",
+    )
 )
 
-dataframe["combined_rank"] = dataframe[
-    [
-        "accuracy_rank",
-        "weighted_f1_rank",
-    ]
-].mean(axis=1)
+dataframe["combined_rank"] = (
+    dataframe[
+        [
+            "accuracy_rank",
+            "weighted_f1_rank",
+        ]
+    ].mean(axis=1)
+)
 
 best_model_name = (
-    dataframe["combined_rank"]
-    .idxmin()
+    dataframe[
+        "combined_rank"
+    ].idxmin()
 )
 
-return best_model_name, dataframe
+return (
+    best_model_name,
+    dataframe,
+)
 ```
 
 # ============================================================
@@ -941,14 +1112,19 @@ def print_dataset_summary(
 training_data,
 testing_data,
 ):
-print_section("DATASET SUMMARY")
+print_section(
+"DATASET SUMMARY"
+)
 
 ```
 print(
-    f"Training samples : {len(training_data):,}"
+    f"Training samples : "
+    f"{len(training_data):,}"
 )
+
 print(
-    f"Testing samples  : {len(testing_data):,}"
+    f"Testing samples  : "
+    f"{len(testing_data):,}"
 )
 ```
 
@@ -957,19 +1133,26 @@ score_model,
 risk_model,
 X_test,
 ):
-predicted_scores = score_model.predict(
+predicted_scores = (
+score_model.predict(
 X_test
+)
 )
 
 ```
-predicted_risks = risk_model.predict(
-    X_test
+predicted_risks = (
+    risk_model.predict(
+        X_test
+    )
 )
 
 prediction_dataframe = pd.DataFrame(
     {
-        "predicted_score": predicted_scores,
-        "predicted_risk": predicted_risks,
+        "predicted_score":
+            predicted_scores,
+
+        "predicted_risk":
+            predicted_risks,
     }
 )
 
@@ -978,27 +1161,46 @@ print_section(
 )
 
 for risk in RISK_ORDER:
+
     subset = prediction_dataframe[
-        prediction_dataframe["predicted_risk"] == risk
+        prediction_dataframe[
+            "predicted_risk"
+        ] == risk
     ]
 
-    print(f"\n{risk}")
+    print(
+        f"\n{risk}"
+    )
 
     if subset.empty:
-        print("  Number of test students : 0")
-        print("  Predicted score range   : No students")
-        print("  Average predicted score : No students")
+
+        print(
+            "  Number of test students : 0"
+        )
+
+        print(
+            "  Predicted score range   : "
+            "No students"
+        )
+
+        print(
+            "  Average predicted score : "
+            "No students"
+        )
+
         continue
 
     print(
         "  Number of test students : "
         f"{len(subset):,}"
     )
+
     print(
         "  Predicted score range   : "
         f"{subset['predicted_score'].min():.2f} - "
         f"{subset['predicted_score'].max():.2f}"
     )
+
     print(
         "  Average predicted score : "
         f"{subset['predicted_score'].mean():.2f}"
@@ -1017,11 +1219,14 @@ score_model,
 risk_model,
 metadata,
 ):
-version_name = f"v{version_number}"
+version_name = (
+f"v{version_number}"
+)
 
 ```
 version_directory = (
-    VERSIONS_DIR / version_name
+    VERSIONS_DIR
+    / version_name
 )
 
 version_directory.mkdir(
@@ -1031,19 +1236,23 @@ version_directory.mkdir(
 
 joblib.dump(
     score_model,
-    version_directory / "score_model.pkl",
+    version_directory
+    / "score_model.pkl",
 )
 
 joblib.dump(
     risk_model,
-    version_directory / "risk_model.pkl",
+    version_directory
+    / "risk_model.pkl",
 )
 
 with open(
-    version_directory / "metadata.json",
+    version_directory
+    / "metadata.json",
     "w",
     encoding="utf-8",
 ) as file:
+
     json.dump(
         metadata,
         file,
@@ -1051,19 +1260,23 @@ with open(
     )
 
 print(
-    f"\nSaved immutable model version: {version_name}"
+    f"\nSaved immutable model "
+    f"version: {version_name}"
 )
 
 return version_directory
 ```
 
-def update_current_model(version_directory):
+def update_current_model(
+version_directory,
+):
 """
 Copy the selected version into models/current/.
 
 ```
 The student application always reads from models/current/.
 """
+
 current_files = [
     "score_model.pkl",
     "risk_model.pkl",
@@ -1071,11 +1284,15 @@ current_files = [
 ]
 
 for filename in current_files:
+
     source = (
-        version_directory / filename
+        version_directory
+        / filename
     )
+
     destination = (
-        CURRENT_MODEL_DIR / filename
+        CURRENT_MODEL_DIR
+        / filename
     )
 
     shutil.copy2(
@@ -1096,28 +1313,44 @@ print(
 # ============================================================
 
 def main():
-print("\n")
-print("=" * 72)
-print(
-f"{PROJECT_NAME} — ML TRAINING PIPELINE"
-)
-print("=" * 72)
 
 ```
-batch_number = get_next_batch_number()
-version_number = get_next_version_number()
+print("\n")
+
+print("=" * 72)
 
 print(
-    f"\nNew batch number  : {batch_number}"
+    f"{PROJECT_NAME} — "
+    "ML TRAINING PIPELINE"
 )
+
+print("=" * 72)
+
+batch_number = (
+    get_next_batch_number()
+)
+
+version_number = (
+    get_next_version_number()
+)
+
 print(
-    f"New model version : v{version_number}"
+    f"\nNew batch number  : "
+    f"{batch_number}"
+)
+
+print(
+    f"New model version : "
+    f"v{version_number}"
 )
 
 # --------------------------------------------------------
 # 14.1 Generate a NEW training/testing batch.
 # --------------------------------------------------------
-print_section("GENERATING NEW SYNTHETIC DATA")
+
+print_section(
+    "GENERATING NEW SYNTHETIC DATA"
+)
 
 training_seed = (
     RANDOM_SEED
@@ -1131,36 +1364,45 @@ testing_seed = (
 )
 
 print(
-    f"Generating {TRAINING_BATCH_SIZE:,} "
+    f"Generating "
+    f"{TRAINING_BATCH_SIZE:,} "
     "training students..."
 )
 
-new_training_data = generate_synthetic_data(
-    TRAINING_BATCH_SIZE,
-    training_seed,
+new_training_data = (
+    generate_synthetic_data(
+        TRAINING_BATCH_SIZE,
+        training_seed,
+    )
 )
 
 print(
-    f"Generating {TESTING_BATCH_SIZE:,} "
+    f"Generating "
+    f"{TESTING_BATCH_SIZE:,} "
     "testing students..."
 )
 
-new_testing_data = generate_synthetic_data(
-    TESTING_BATCH_SIZE,
-    testing_seed,
+new_testing_data = (
+    generate_synthetic_data(
+        TESTING_BATCH_SIZE,
+        testing_seed,
+    )
 )
 
 # --------------------------------------------------------
 # 14.2 Save the new batches.
 # --------------------------------------------------------
+
 training_path = (
     TRAINING_DATA_DIR
-    / f"train_batch_{batch_number:03d}.csv"
+    / f"train_batch_"
+    f"{batch_number:03d}.csv"
 )
 
 testing_path = (
     TESTING_DATA_DIR
-    / f"test_batch_{batch_number:03d}.csv"
+    / f"test_batch_"
+    f"{batch_number:03d}.csv"
 )
 
 new_training_data.to_csv(
@@ -1174,36 +1416,53 @@ new_testing_data.to_csv(
 )
 
 print(
-    f"\nSaved training batch: {training_path}"
+    f"\nSaved training batch: "
+    f"{training_path}"
 )
+
 print(
-    f"Saved testing batch : {testing_path}"
+    f"Saved testing batch : "
+    f"{testing_path}"
 )
 
 # --------------------------------------------------------
 # 14.3 Load ALL accumulated historical data.
 # --------------------------------------------------------
-print_section("LOADING ALL HISTORICAL DATA")
 
-training_files = get_existing_training_batches()
-testing_files = get_existing_testing_batches()
-
-all_training_data = load_historical_data(
-    training_files
+print_section(
+    "LOADING ALL HISTORICAL DATA"
 )
 
-all_testing_data = load_historical_data(
-    testing_files
+training_files = (
+    get_existing_training_batches()
+)
+
+testing_files = (
+    get_existing_testing_batches()
+)
+
+all_training_data = (
+    load_historical_data(
+        training_files
+    )
+)
+
+all_testing_data = (
+    load_historical_data(
+        testing_files
+    )
 )
 
 if all_training_data.empty:
     raise RuntimeError(
-        "No valid training data was found."
+        "No valid training data "
+        "was found."
     )
 
 if all_testing_data.empty:
     raise RuntimeError(
-        "No valid testing data was found."
+        "No valid testing data "
+        "was found."
     )
 
 print_dataset_summary(
@@ -1212,26 +1471,59 @@ print_dataset_summary(
 )
 
 print(
-    f"\nTraining batches : {len(training_files)}"
+    f"\nTraining batches : "
+    f"{len(training_files)}"
 )
+
 print(
-    f"Testing batches  : {len(testing_files)}"
+    f"Testing batches  : "
+    f"{len(testing_files)}"
 )
 
 # --------------------------------------------------------
 # 14.4 Prepare ML matrices.
 # --------------------------------------------------------
-X_train = all_training_data[FEATURES]
-y_train_score = all_training_data[SCORE_TARGET]
-y_train_risk = all_training_data[RISK_TARGET]
 
-X_test = all_testing_data[FEATURES]
-y_test_score = all_testing_data[SCORE_TARGET]
-y_test_risk = all_testing_data[RISK_TARGET]
+X_train = (
+    all_training_data[
+        FEATURES
+    ]
+)
+
+y_train_score = (
+    all_training_data[
+        SCORE_TARGET
+    ]
+)
+
+y_train_risk = (
+    all_training_data[
+        RISK_TARGET
+    ]
+)
+
+X_test = (
+    all_testing_data[
+        FEATURES
+    ]
+)
+
+y_test_score = (
+    all_testing_data[
+        SCORE_TARGET
+    ]
+)
+
+y_test_risk = (
+    all_testing_data[
+        RISK_TARGET
+    ]
+)
 
 # --------------------------------------------------------
 # 14.5 Train score candidates.
 # --------------------------------------------------------
+
 (
     trained_score_models,
     score_results,
@@ -1245,6 +1537,7 @@ y_test_risk = all_testing_data[RISK_TARGET]
 # --------------------------------------------------------
 # 14.6 Train risk candidates.
 # --------------------------------------------------------
+
 (
     trained_risk_models,
     risk_results,
@@ -1258,6 +1551,7 @@ y_test_risk = all_testing_data[RISK_TARGET]
 # --------------------------------------------------------
 # 14.7 Select the best candidates.
 # --------------------------------------------------------
+
 (
     best_score_model_name,
     score_ranking,
@@ -1272,27 +1566,39 @@ y_test_risk = all_testing_data[RISK_TARGET]
     risk_results
 )
 
-best_score_model = trained_score_models[
-    best_score_model_name
-]
-
-best_risk_model = trained_risk_models[
-    best_risk_model_name
-]
-
-print_section("BEST MODELS SELECTED")
-
-print(
-    f"Best score model : {best_score_model_name}"
+best_score_model = (
+    trained_score_models[
+        best_score_model_name
+    ]
 )
+
+best_risk_model = (
+    trained_risk_models[
+        best_risk_model_name
+    ]
+)
+
+print_section(
+    "BEST MODELS SELECTED"
+)
+
 print(
-    f"Best risk model  : {best_risk_model_name}"
+    f"Best score model : "
+    f"{best_score_model_name}"
+)
+
+print(
+    f"Best risk model  : "
+    f"{best_risk_model_name}"
 )
 
 # --------------------------------------------------------
 # 14.8 Print candidate comparisons.
 # --------------------------------------------------------
-print_section("SCORE MODEL COMPARISON")
+
+print_section(
+    "SCORE MODEL COMPARISON"
+)
 
 print(
     score_ranking[
@@ -1305,7 +1611,9 @@ print(
     ].to_string()
 )
 
-print_section("RISK MODEL COMPARISON")
+print_section(
+    "RISK MODEL COMPARISON"
+)
 
 print(
     risk_ranking[
@@ -1320,6 +1628,7 @@ print(
 # --------------------------------------------------------
 # 14.9 Diagnostic prediction ranges.
 # --------------------------------------------------------
+
 print_model_predicted_score_ranges(
     best_score_model,
     best_risk_model,
@@ -1329,51 +1638,96 @@ print_model_predicted_score_ranges(
 # --------------------------------------------------------
 # 14.10 Build complete metadata.
 # --------------------------------------------------------
+
 metadata = {
     "project": PROJECT_NAME,
-    "version": f"v{version_number}",
-    "created_at": utc_now(),
-    "batch_number": batch_number,
-    "new_training_samples": TRAINING_BATCH_SIZE,
-    "new_testing_samples": TESTING_BATCH_SIZE,
-    "total_training_samples": int(
-        len(all_training_data)
-    ),
-    "total_testing_samples": int(
-        len(all_testing_data)
-    ),
-    "training_batches": len(training_files),
-    "testing_batches": len(testing_files),
-    "features": FEATURES,
-    "score_target": SCORE_TARGET,
-    "risk_target": RISK_TARGET,
-    "risk_order": RISK_ORDER,
-    "candidate_score_models": list(
-        trained_score_models.keys()
-    ),
-    "candidate_risk_models": list(
-        trained_risk_models.keys()
-    ),
-    "best_score_model": best_score_model_name,
-    "best_risk_model": best_risk_model_name,
-    "score_metrics": score_results,
-    "risk_metrics": risk_results,
-    "historical_data_reused": True,
+
+    "version":
+        f"v{version_number}",
+
+    "created_at":
+        utc_now(),
+
+    "batch_number":
+        batch_number,
+
+    "new_training_samples":
+        TRAINING_BATCH_SIZE,
+
+    "new_testing_samples":
+        TESTING_BATCH_SIZE,
+
+    "total_training_samples":
+        int(
+            len(all_training_data)
+        ),
+
+    "total_testing_samples":
+        int(
+            len(all_testing_data)
+        ),
+
+    "training_batches":
+        len(training_files),
+
+    "testing_batches":
+        len(testing_files),
+
+    "features":
+        FEATURES,
+
+    "score_target":
+        SCORE_TARGET,
+
+    "risk_target":
+        RISK_TARGET,
+
+    "risk_order":
+        RISK_ORDER,
+
+    "candidate_score_models":
+        list(
+            trained_score_models.keys()
+        ),
+
+    "candidate_risk_models":
+        list(
+            trained_risk_models.keys()
+        ),
+
+    "best_score_model":
+        best_score_model_name,
+
+    "best_risk_model":
+        best_risk_model_name,
+
+    "score_metrics":
+        score_results,
+
+    "risk_metrics":
+        risk_results,
+
+    "historical_data_reused":
+        True,
 }
 
 # --------------------------------------------------------
 # 14.11 Save immutable version.
 # --------------------------------------------------------
-version_directory = save_model_version(
-    version_number,
-    best_score_model,
-    best_risk_model,
-    metadata,
+
+version_directory = (
+    save_model_version(
+        version_number,
+        best_score_model,
+        best_risk_model,
+        metadata,
+    )
 )
 
 # --------------------------------------------------------
 # 14.12 Update the application's current models.
 # --------------------------------------------------------
+
 update_current_model(
     version_directory
 )
@@ -1381,42 +1735,61 @@ update_current_model(
 # --------------------------------------------------------
 # 14.13 Update registry AFTER all artifacts exist.
 # --------------------------------------------------------
-registry = write_project_registry(
-    version_number,
-    batch_number,
-    metadata,
+
+registry = (
+    write_project_registry(
+        version_number,
+        batch_number,
+        metadata,
+    )
 )
 
 # --------------------------------------------------------
 # 14.14 Final status.
 # --------------------------------------------------------
-print_section("WAYPOINT TRAINING RUN COMPLETE")
+
+print_section(
+    "WAYPOINT TRAINING RUN COMPLETE"
+)
 
 print(
-    f"Model version created : v{version_number}"
+    f"Model version created : "
+    f"v{version_number}"
 )
+
 print(
-    f"Best score model     : {best_score_model_name}"
+    f"Best score model     : "
+    f"{best_score_model_name}"
 )
+
 print(
-    f"Best risk model      : {best_risk_model_name}"
+    f"Best risk model      : "
+    f"{best_risk_model_name}"
 )
+
 print(
     f"Total training data  : "
     f"{len(all_training_data):,}"
 )
+
 print(
     f"Total testing data   : "
     f"{len(all_testing_data):,}"
 )
+
 print(
-    f"Version directory    : {version_directory}"
+    f"Version directory    : "
+    f"{version_directory}"
 )
+
 print(
-    f"Current model dir    : {CURRENT_MODEL_DIR}"
+    f"Current model dir    : "
+    f"{CURRENT_MODEL_DIR}"
 )
+
 print(
-    f"Registry             : {REGISTRY_PATH}"
+    f"Registry             : "
+    f"{REGISTRY_PATH}"
 )
 
 return registry
