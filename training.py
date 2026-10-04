@@ -1,46 +1,3 @@
-# ============================================================
-# WAYPOINT
-# Explainable Student Academic Risk + Dream Score ML Pipeline
-#
-# FINAL TRAINING PIPELINE
-#
-# Every execution:
-#   1. Generates 20,000 new training students.
-#   2. Generates 10,000 new testing students.
-#   3. Loads all historical training/testing batches.
-#   4. Trains fresh ML candidates on all accumulated data.
-#   5. Evaluates all candidates on the accumulated test data.
-#   6. Selects the best score and risk models.
-#   7. Saves a new immutable model version.
-#   8. Updates models/current/.
-#   9. Writes project_registry.json.
-#
-# PROJECT:
-#   WayPoint
-#
-# FEATURES:
-#   study_hours
-#   phone_hours
-#   days_before_exam
-#   assignment_percentage
-#   attendance_percentage
-#   previous_marks
-#
-# NOT USED:
-#   recent assessment performance
-#   study consistency
-#
-# IMPORTANT:
-#   The synthetic-data generator uses a hidden nonlinear process
-#   only to create training labels.
-#
-#   The prediction application does NOT use those formulas.
-#   The ML models learn the relationships from the generated data.
-#
-#   Historical data is retained and reused on every training run.
-#   Fresh models are trained on the complete accumulated dataset.
-# ============================================================
-
 
 from pathlib import Path
 from datetime import datetime, timezone
@@ -76,9 +33,9 @@ from sklearn.metrics import (
 warnings.filterwarnings("ignore")
 
 
-# ============================================================
-# 1. PROJECT CONFIGURATION
-# ============================================================
+                                                              
+                          
+                                                              
 
 PROJECT_NAME = "WayPoint"
 
@@ -111,9 +68,9 @@ RISK_ORDER = [
 REGISTRY_FILENAME = "project_registry.json"
 
 
-# ============================================================
-# 2. PROJECT DIRECTORIES
-# ============================================================
+                                                              
+                        
+                                                              
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -138,12 +95,12 @@ for directory in [
     )
 
 
-# ============================================================
-# 3. UTILITY FUNCTIONS
-# ============================================================
+                                                              
+                      
+                                                              
 
 def utc_now():
-    """Return a timezone-aware UTC timestamp."""
+                                                
     return datetime.now(timezone.utc).isoformat()
 
 
@@ -155,7 +112,7 @@ def print_section(title):
 
 
 def relative_project_path(path):
-    """Return a repository-style path relative to the project root."""
+                                                                      
 
     relative_path = (
         Path(path)
@@ -166,12 +123,12 @@ def relative_project_path(path):
     return relative_path.as_posix()
 
 
-# ============================================================
-# 4. LOCAL PROJECT REGISTRY
-# ============================================================
+                                                              
+                           
+                                                              
 
 def load_registry():
-    """Load project_registry.json if it exists locally."""
+                                                          
 
     if not REGISTRY_PATH.exists():
         return None
@@ -197,7 +154,7 @@ def load_registry():
 
 
 def collect_tracked_files():
-    """Collect persistent project artifacts."""
+                                               
 
     files = []
 
@@ -228,7 +185,7 @@ def write_project_registry(
     batch_number,
     metadata,
 ):
-    """Write a local reproducibility registry."""
+                                                 
 
     registry = {
         "project": PROJECT_NAME,
@@ -267,28 +224,28 @@ def write_project_registry(
     return registry
 
 
-# ============================================================
-# 5. SYNTHETIC DATA GENERATION
-# ============================================================
+                                                              
+                              
+                                                              
 
 def generate_synthetic_data(
     n_samples,
     seed,
 ):
-    """
-    Generate synthetic student data.
-
-    The hidden equations below are used only to generate
-    synthetic target values.
-
-    The application does not use these equations for prediction.
-    """
+\
+\
+\
+\
+\
+\
+\
+       
 
     rng = np.random.default_rng(seed)
 
-    # --------------------------------------------------------
-    # Study hours
-    # --------------------------------------------------------
+                                                              
+                 
+                                                              
 
     study_hours = rng.normal(
         loc=3.2,
@@ -302,9 +259,9 @@ def generate_synthetic_data(
         8.0,
     )
 
-    # --------------------------------------------------------
-    # Phone usage
-    # --------------------------------------------------------
+                                                              
+                 
+                                                              
 
     phone_hours = rng.normal(
         loc=3.5,
@@ -318,9 +275,9 @@ def generate_synthetic_data(
         10.0,
     )
 
-    # --------------------------------------------------------
-    # Days before exam
-    # --------------------------------------------------------
+                                                              
+                      
+                                                              
 
     days_before_exam = rng.normal(
         loc=12,
@@ -334,9 +291,9 @@ def generate_synthetic_data(
         30,
     )
 
-    # --------------------------------------------------------
-    # Assignment percentage
-    # --------------------------------------------------------
+                                                              
+                           
+                                                              
 
     assignment_percentage = rng.normal(
         loc=75,
@@ -350,9 +307,9 @@ def generate_synthetic_data(
         100,
     )
 
-    # --------------------------------------------------------
-    # Attendance percentage
-    # --------------------------------------------------------
+                                                              
+                           
+                                                              
 
     attendance_percentage = rng.normal(
         loc=78,
@@ -366,9 +323,9 @@ def generate_synthetic_data(
         100,
     )
 
-    # --------------------------------------------------------
-    # Previous marks
-    # --------------------------------------------------------
+                                                              
+                    
+                                                              
 
     previous_marks = rng.normal(
         loc=65,
@@ -382,9 +339,9 @@ def generate_synthetic_data(
         100,
     )
 
-    # ========================================================
-    # Hidden nonlinear relationship
-    # ========================================================
+                                                              
+                                   
+                                                              
 
     study_effect = (
         18
@@ -461,9 +418,9 @@ def generate_synthetic_data(
         100,
     )
 
-    # --------------------------------------------------------
-    # Risk categories
-    # --------------------------------------------------------
+                                                              
+                     
+                                                              
 
     risk_category = np.select(
         [
@@ -495,9 +452,9 @@ def generate_synthetic_data(
     )
 
 
-# ============================================================
-# 6. DATA BATCH MANAGEMENT
-# ============================================================
+                                                              
+                          
+                                                              
 
 def get_existing_training_batches():
 
@@ -518,9 +475,9 @@ def get_existing_testing_batches():
 
 
 def load_historical_data(file_list):
-    """
-    Load all valid historical CSV batches.
-    """
+\
+\
+       
 
     if not file_list:
         return pd.DataFrame()
@@ -569,7 +526,7 @@ def load_historical_data(file_list):
         ignore_index=True,
     )
 
-    # Convert model input columns to numeric values.
+                                                    
 
     for column in FEATURES + [
         SCORE_TARGET
@@ -653,12 +610,12 @@ def get_next_version_number():
     ) + 1
 
 
-# ============================================================
-# 7. MODEL FACTORIES
-# ============================================================
+                                                              
+                    
+                                                              
 
 def create_score_models():
-    """Create score-model candidates."""
+                                        
 
     return {
 
@@ -689,7 +646,7 @@ def create_score_models():
 
 
 def create_risk_models():
-    """Create risk-model candidates."""
+                                       
 
     return {
 
@@ -721,9 +678,9 @@ def create_risk_models():
     }
 
 
-# ============================================================
-# 8. MODEL EVALUATION
-# ============================================================
+                                                              
+                     
+                                                              
 
 def evaluate_score_model(
     model,
@@ -789,9 +746,9 @@ def evaluate_risk_model(
     }
 
 
-# ============================================================
-# 9. TRAIN SCORE MODELS
-# ============================================================
+                                                              
+                       
+                                                              
 
 def train_score_models(
     X_train,
@@ -869,9 +826,9 @@ def train_score_models(
     )
 
 
-# ============================================================
-# 10. TRAIN RISK MODELS
-# ============================================================
+                                                              
+                       
+                                                              
 
 def train_risk_models(
     X_train,
@@ -947,25 +904,25 @@ def train_risk_models(
     )
 
 
-# ============================================================
-# 11. MODEL SELECTION
-# ============================================================
+                                                              
+                     
+                                                              
 
 def select_best_score_model(
     results,
 ):
-    """
-    Select using combined metric rank.
-
-    R²:
-        Higher is better.
-
-    RMSE:
-        Lower is better.
-
-    MAE:
-        Lower is better.
-    """
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+       
 
     dataframe = pd.DataFrame(
         results
@@ -1017,15 +974,15 @@ def select_best_score_model(
 def select_best_risk_model(
     results,
 ):
-    """
-    Select using combined metric rank.
-
-    Accuracy:
-        Higher is better.
-
-    Weighted F1:
-        Higher is better.
-    """
+\
+\
+\
+\
+\
+\
+\
+\
+       
 
     dataframe = pd.DataFrame(
         results
@@ -1070,9 +1027,9 @@ def select_best_risk_model(
     )
 
 
-# ============================================================
-# 12. DATASET SUMMARY
-# ============================================================
+                                                              
+                     
+                                                              
 
 def print_dataset_summary(
     training_data,
@@ -1094,9 +1051,9 @@ def print_dataset_summary(
     )
 
 
-# ============================================================
-# 13. MODEL PREDICTION DIAGNOSTICS
-# ============================================================
+                                                              
+                                  
+                                                              
 
 def print_model_predicted_score_ranges(
     score_model,
@@ -1177,9 +1134,9 @@ def print_model_predicted_score_ranges(
         )
 
 
-# ============================================================
-# 14. MODEL PERSISTENCE
-# ============================================================
+                                                              
+                       
+                                                              
 
 def save_model_version(
     version_number,
@@ -1239,13 +1196,13 @@ def update_current_model(
     version_directory,
 ):
 
-    """
-    Copy the selected model version into
-    models/current/.
-
-    The student application reads the models
-    from models/current/.
-    """
+\
+\
+\
+\
+\
+\
+       
 
     current_files = [
         "score_model.pkl",
@@ -1276,9 +1233,9 @@ def update_current_model(
     )
 
 
-# ============================================================
-# 15. MAIN TRAINING PIPELINE
-# ============================================================
+                                                              
+                            
+                                                              
 
 def main():
 
@@ -1293,9 +1250,9 @@ def main():
 
     print("=" * 72)
 
-    # --------------------------------------------------------
-    # Determine new batch and version numbers.
-    # --------------------------------------------------------
+                                                              
+                                              
+                                                              
 
     batch_number = (
         get_next_batch_number()
@@ -1315,9 +1272,9 @@ def main():
         f"v{version_number}"
     )
 
-    # --------------------------------------------------------
-    # Generate new training/testing data.
-    # --------------------------------------------------------
+                                                              
+                                         
+                                                              
 
     print_section(
         "GENERATING NEW SYNTHETIC DATA"
@@ -1360,9 +1317,9 @@ def main():
         )
     )
 
-    # --------------------------------------------------------
-    # Save new data batches.
-    # --------------------------------------------------------
+                                                              
+                            
+                                                              
 
     training_path = (
         TRAINING_DATA_DIR
@@ -1394,9 +1351,9 @@ def main():
         f"{testing_path}"
     )
 
-    # --------------------------------------------------------
-    # Load all historical data.
-    # --------------------------------------------------------
+                                                              
+                               
+                                                              
 
     print_section(
         "LOADING ALL HISTORICAL DATA"
@@ -1451,9 +1408,9 @@ def main():
         f"{len(testing_files)}"
     )
 
-    # --------------------------------------------------------
-    # Prepare training and testing matrices.
-    # --------------------------------------------------------
+                                                              
+                                            
+                                                              
 
     X_train = (
         all_training_data[
@@ -1491,9 +1448,9 @@ def main():
         ]
     )
 
-    # --------------------------------------------------------
-    # Train score models.
-    # --------------------------------------------------------
+                                                              
+                         
+                                                              
 
     (
         trained_score_models,
@@ -1505,9 +1462,9 @@ def main():
         y_test_score,
     )
 
-    # --------------------------------------------------------
-    # Train risk models.
-    # --------------------------------------------------------
+                                                              
+                        
+                                                              
 
     (
         trained_risk_models,
@@ -1519,9 +1476,9 @@ def main():
         y_test_risk,
     )
 
-    # --------------------------------------------------------
-    # Select best score model.
-    # --------------------------------------------------------
+                                                              
+                              
+                                                              
 
     (
         best_score_model_name,
@@ -1530,9 +1487,9 @@ def main():
         score_results
     )
 
-    # --------------------------------------------------------
-    # Select best risk model.
-    # --------------------------------------------------------
+                                                              
+                             
+                                                              
 
     (
         best_risk_model_name,
@@ -1567,9 +1524,9 @@ def main():
         f"{best_risk_model_name}"
     )
 
-    # --------------------------------------------------------
-    # Display score model comparison.
-    # --------------------------------------------------------
+                                                              
+                                     
+                                                              
 
     print_section(
         "SCORE MODEL COMPARISON"
@@ -1586,9 +1543,9 @@ def main():
         ].to_string()
     )
 
-    # --------------------------------------------------------
-    # Display risk model comparison.
-    # --------------------------------------------------------
+                                                              
+                                    
+                                                              
 
     print_section(
         "RISK MODEL COMPARISON"
@@ -1604,9 +1561,9 @@ def main():
         ].to_string()
     )
 
-    # --------------------------------------------------------
-    # Display model prediction ranges.
-    # --------------------------------------------------------
+                                                              
+                                      
+                                                              
 
     print_model_predicted_score_ranges(
         best_score_model,
@@ -1614,9 +1571,9 @@ def main():
         X_test,
     )
 
-    # --------------------------------------------------------
-    # Build metadata.
-    # --------------------------------------------------------
+                                                              
+                     
+                                                              
 
     metadata = {
 
@@ -1692,9 +1649,9 @@ def main():
             True,
     }
 
-    # --------------------------------------------------------
-    # Save model version.
-    # --------------------------------------------------------
+                                                              
+                         
+                                                              
 
     version_directory = (
         save_model_version(
@@ -1705,17 +1662,17 @@ def main():
         )
     )
 
-    # --------------------------------------------------------
-    # Update current models.
-    # --------------------------------------------------------
+                                                              
+                            
+                                                              
 
     update_current_model(
         version_directory
     )
 
-    # --------------------------------------------------------
-    # Update project registry.
-    # --------------------------------------------------------
+                                                              
+                              
+                                                              
 
     registry = (
         write_project_registry(
@@ -1725,9 +1682,9 @@ def main():
         )
     )
 
-    # --------------------------------------------------------
-    # Final status.
-    # --------------------------------------------------------
+                                                              
+                   
+                                                              
 
     print_section(
         "WAYPOINT TRAINING RUN COMPLETE"
@@ -1776,9 +1733,9 @@ def main():
     return registry
 
 
-# ============================================================
-# 16. PROGRAM ENTRY POINT
-# ============================================================
+                                                              
+                         
+                                                              
 
 if __name__ == "__main__":
     main()
